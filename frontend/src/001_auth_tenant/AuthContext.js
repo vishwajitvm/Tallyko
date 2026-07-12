@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
       const data = response.data;
       if (data.access_token) {
         setToken(data.access_token);
-        setUser({ email: data.user.email });
+        setUser({ role: data.role || 'user', tenant_id: data.tenant_id });
         await AsyncStorage.setItem('@tallyko_token', data.access_token);
         return { success: true };
       }

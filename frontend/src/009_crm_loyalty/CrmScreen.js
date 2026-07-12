@@ -48,7 +48,10 @@ export default function CrmScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>CRM & Loyalty</Text>
-        <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]}>
+        <TouchableOpacity 
+          style={[styles.addButton, { backgroundColor: colors.primary }]}
+          onPress={() => Alert.alert("Coming Soon", "Add Customer screen is in development.")}
+        >
           <Text style={styles.addButtonText}>+ Customer</Text>
         </TouchableOpacity>
       </View>

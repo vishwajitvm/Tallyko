@@ -17,8 +17,11 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
+import { TouchableOpacity, Text } from 'react-native';
+
 const MainTabs = () => {
   const { colors } = useTheme();
+  const { logout } = useAuth();
   
   return (
     <Tab.Navigator
@@ -28,6 +31,11 @@ const MainTabs = () => {
         tabBarStyle: { backgroundColor: colors.surface },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.secondary,
+        headerRight: () => (
+          <TouchableOpacity onPress={logout} style={{ marginRight: 15 }}>
+            <Text style={{ color: colors.primary, fontWeight: 'bold' }}>Logout</Text>
+          </TouchableOpacity>
+        ),
       }}
     >
       <Tab.Screen name="Billing" component={BillingScreen} />

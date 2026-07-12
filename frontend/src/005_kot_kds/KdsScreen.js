@@ -41,7 +41,11 @@ export default function KdsScreen() {
     fetchOrders();
   };
 
+  const [processingOrders, setProcessingOrders] = useState(new Set());
+
   const completeOrder = async (orderId) => {
+    if (processingOrders.has(orderId)) return;
+    setProcessingOrders(prev => new Set(prev).add(orderId));
     try {
       await axios.put(`${API_URL}/kitchen/kds/orders/${orderId}/status`, 
         { status: 'completed' },
@@ -52,41 +56,55 @@ export default function KdsScreen() {
     } catch (error) {
       console.error("Failed to update order status", error);
       Alert.alert("Error", "Could not mark order as completed.");
+    } finally {
+      setProcessingOrders(prev => {
+        const next = new Set(prev);
+        next.delete(orderId);
+        return next;
+      });
     }
   };
 
-  const renderOrder = ({ item }) => (
-    <View style={[styles.orderCard, { backgroundColor: colors.surface, borderColor: colors.secondary + '30' }]}>
-      <View style={styles.orderHeader}>
-        <Text style={[styles.orderId, { color: colors.text }]}>Order #{item.id.substring(0, 8)}</Text>
-        <Text style={[styles.orderType, { backgroundColor: colors.secondary + '20', color: colors.secondary }]}>
-          {item.type}
-        </Text>
-      </View>
-      
-      {/* Mocking items since API currently returns empty array for items */}
-      <View style={styles.itemList}>
-        {item.items && item.items.length > 0 ? (
-          item.items.map((prod, idx) => (
-            <Text key={idx} style={[styles.itemText, { color: colors.text }]}>
-              {prod.quantity}x {prod.name}
-            </Text>
-          ))
-        ) : (
-          <Text style={{ color: colors.secondary, fontStyle: 'italic', marginVertical: 10 }}>
-            (Items would be listed here)
+  const renderOrder = ({ item }) => {
+    const isProcessing = processingOrders.has(item.id);
+    return (
+      <View style={[styles.orderCard, { backgroundColor: colors.surface, borderColor: colors.secondary + '30' }]}>
+        <View style={styles.orderHeader}>
+          <Text style={[styles.orderId, { color: colors.text }]}>Order #{item.id.substring(0, 8)}</Text>
+          <Text style={[styles.orderType, { backgroundColor: colors.secondary + '20', color: colors.secondary }]}>
+            {item.type}
           </Text>
-        )}
-      </View>
+        </View>
+        
+        {/* Mocking items since API currently returns empty array for items */}
+        <View style={styles.itemList}>
+          {item.items && item.items.length > 0 ? (
+            item.items.map((prod, idx) => (
+              <Text key={idx} style={[styles.itemText, { color: colors.text }]}>
+                {prod.quantity}x {prod.name}
+              </Text>
+            ))
+          ) : (
+            <Text style={{ color: colors.secondary, fontStyle: 'italic', marginVertical: 10 }}>
+              (Items would be listed here)
+            </Text>
+          )}
+        </View>
 
-      <TouchableOpacity 
-        style={[styles.completeBtn, { backgroundColor: '#34C759' }]} 
-        onPress={() => completeOrder(item.id)}
-      >
-        <Text style={styles.completeBtnText}>Mark Completed</Text>
-      </TouchableOpacity>
-    </View>
-  );
+        <TouchableOpacity 
+          style={[styles.completeBtn, { backgroundColor: isProcessing ? '#999' : '#34C759' }]} 
+          onPress={() => completeOrder(item.id)}
+          disabled={isProcessing}
+        >
+          {isProcessing ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.completeBtnText}>Mark Completed</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
