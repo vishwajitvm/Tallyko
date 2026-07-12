@@ -1,22 +1,7 @@
 version: '3.8'
 
 services:
-  proxy:
-    image: traefik:v2.10
-    container_name: tallyko-proxy
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - tallyko_net
-    restart: always
+# Proxy removed temporarily to avoid Windows docker socket errors
 
   backend:
     build:

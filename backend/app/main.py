@@ -10,12 +10,31 @@ from app.core.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("tallyko")
 
-# Initialize tracenest (wires standard logger to JSON/structured format)
-try:
-    from tracenest import tracenest_init
-    tracenest_init()
-except ImportError:
-    pass
+import os
+import json
+
+# Ensure TraceNest log directory exists
+os.makedirs("/app/TraceNestLogs", exist_ok=True)
+
+class TraceNestJSONFormatter(logging.Formatter):
+    def format(self, record):
+        from tracenest.core.formatter import format_log
+        
+        # Extract custom fields attached via the `extra` dictionary in standard logging
+        tenant_id = getattr(record, "tenant_id", "unknown")
+        trace_id = getattr(record, "trace_id", "N/A")
+        
+        return format_log(
+            level=record.levelname,
+            message=record.getMessage(),
+            metadata={"tenant_id": tenant_id},
+            trace_id=trace_id,
+            exception=record.exc_info[1] if record.exc_info else None
+        )
+
+file_handler = logging.FileHandler("/app/TraceNestLogs/app.log")
+file_handler.setFormatter(TraceNestJSONFormatter())
+logging.getLogger().addHandler(file_handler)
 
 class TracingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
