@@ -1,4 +1,6 @@
 import React from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { AuthProvider, useAuth } from './src/001_auth_tenant/AuthContext';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
@@ -9,6 +11,7 @@ import BillingScreen from './src/003_billing/BillingScreen';
 import TableMgmtScreen from './src/004_table_mgmt/TableMgmtScreen';
 import InventoryScreen from './src/007_inventory/StockScreen';
 import AnalyticsScreen from './src/010_analytics/AnalyticsScreen';
+import BarcodeScannerScreen from './src/006_barcode_variants/BarcodeScannerScreen';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 const Stack = createStackNavigator();
@@ -31,6 +34,7 @@ const MainTabs = () => {
       <Tab.Screen name="Catalog" component={CatalogScreen} />
       <Tab.Screen name="Tables" component={TableMgmtScreen} />
       <Tab.Screen name="Inventory" component={InventoryScreen} />
+      <Tab.Screen name="Scanner" component={BarcodeScannerScreen} />
       <Tab.Screen name="Analytics" component={AnalyticsScreen} />
     </Tab.Navigator>
   );
@@ -39,20 +43,33 @@ const MainTabs = () => {
 // We wrap the actual navigation in a component so it can consume useTheme hook
 const AppNavigator = () => {
   const { colors } = useTheme();
+  const { user, loading } = useAuth();
   
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Login"
         screenOptions={{
           headerStyle: { backgroundColor: colors.surface },
           headerTintColor: colors.text,
           headerTitleStyle: { fontWeight: 'bold' },
         }}
       >
-        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Create Account' }} />
-        <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+        {user ? (
+          <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Create Account' }} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -61,7 +78,9 @@ const AppNavigator = () => {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppNavigator />
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

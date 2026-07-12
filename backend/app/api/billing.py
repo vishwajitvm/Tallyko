@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.future import select
+from typing import List
 from app.core.tenant import get_db_session
 from app.models.models import Order, OrderItem
 from app.schemas.billing import OrderCreate, OrderResponse
@@ -8,9 +9,15 @@ import logging
 logger = logging.getLogger("tallyko")
 router = APIRouter(prefix="/billing", tags=["Billing"])
 
+@router.get("/orders", response_model=List[OrderResponse])
+async def get_orders(request: Request, db=Depends(get_db_session)):
+    tenant_id = request.state.tenant_id if hasattr(request.state, 'tenant_id') else "00000000-0000-0000-0000-000000000000"
+    result = await db.execute(select(Order).where(Order.tenant_id == tenant_id))
+    return result.scalars().all()
+
 @router.post("/orders", response_model=OrderResponse)
 async def create_order(request: Request, data: OrderCreate, db=Depends(get_db_session)):
-    tenant_id = request.state.tenant_id if hasattr(request.state, 'tenant_id') else "default-tenant-uuid"
+    tenant_id = request.state.tenant_id if hasattr(request.state, 'tenant_id') else "00000000-0000-0000-0000-000000000000"
     logger.info(f"[Billing] Creating new order for tenant {tenant_id} at location {data.location_id}")
     
     # Calculate totals

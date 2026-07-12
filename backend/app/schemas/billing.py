@@ -15,7 +15,8 @@ class OrderCreate(BaseModel):
 class OrderResponse(BaseModel):
     id: UUID
     status: str
-    total: float
+    total_amount: float
+    type: str
     class Config:
         orm_mode = True
 

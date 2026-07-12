@@ -71,12 +71,21 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 content={"success": False, "error": {"code": "INTERNAL_SERVER_ERROR", "message": "An unexpected error occurred."}}
             )
 
-from app.api import auth, catalog, billing, analytics, kitchen, inventory, tables, online_store, crm, ai, sync
+from app.api import auth, catalog, billing, analytics, kitchen, inventory, tables, online_store, crm, ai, sync, qr_menu
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Tallyko POS Backend",
     version="0.1.0",
     description="Multi-tenant POS backend for Tallyko"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins for MVP; tighten this for prod!
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
 )
 
 app.add_middleware(TracingMiddleware)
@@ -92,6 +101,7 @@ app.include_router(online_store.router, prefix="/api/v1")
 app.include_router(crm.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
 app.include_router(sync.router, prefix="/api/v1")
+app.include_router(qr_menu.router, prefix="/api/v1")
 
 try:
     from tracenest.ui.router import router as tracenest_ui_router
