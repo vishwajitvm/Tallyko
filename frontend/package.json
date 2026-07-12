@@ -2,6 +2,7 @@
   "name": "tallyko-frontend",
   "version": "0.1.0",
   "private": true,
+  "main": "index.js",
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
