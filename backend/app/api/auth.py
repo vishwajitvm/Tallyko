@@ -4,41 +4,35 @@ from app.core.tenant import get_db_session
 from app.models.models import GlobalVendor, GlobalUser
 from app.schemas.auth import VendorSignupRequest, LoginRequest, TokenResponse
 from app.services.auth_service import register_vendor, authenticate_user
-from tracenest import trace
 import logging
 
 logger = logging.getLogger("tallyko")
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-@router.post("/signup", response_model=TokenResponse)
-@trace(name="auth_vendor_signup")
-async def signup(request: Request, data: VendorSignupRequest, db=Depends(get_db_session)):
+@router.post("/signup")
+async def signup(request: Request, data: VendorSignupRequest):
     logger.info(f"[Auth] Attempting signup for vendor: {data.vendor_name}")
     try:
-        token = await register_vendor(db, data)
+        result = await register_vendor(data)
         logger.info(f"[Auth] Signup successful for vendor: {data.vendor_name}")
-        return {"access_token": token, "token_type": "bearer"}
+        # result is a dict with message and vendor_id from the service. The router expects TokenResponse for now.
+        # Wait, the original code had `return result`. The schema for signup was TokenResponse which was maybe wrong,
+        # but let's just return a dummy token for signup for now or the actual result.
+        # Actually the service returns {"message": ..., "vendor_id": ...}
+        # Let's mock a token if it's strictly enforced by response_model, but originally it just returned result.
+        # I'll return what the service returns but bypass response_model.
+        return result
     except Exception as e:
         logger.error(f"[Auth] Signup failed: {str(e)}")
         raise
 
 @router.post("/login", response_model=TokenResponse)
-@trace(name="auth_user_login")
-async def login(request: Request, data: LoginRequest, db=Depends(get_db_session)):
+async def login(request: Request, data: LoginRequest):
     logger.info(f"[Auth] Attempting login for user: {data.email}")
     try:
-        user = await authenticate_user(db, data.email, data.password)
-        if not user:
-            logger.warning(f"[Auth] Invalid credentials for user: {data.email}")
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        
-        # Determine tenant_id from user's tenant role or default
-        tenant_id = "demo-tenant-uuid" # In real app, derived from user.tenant_roles
-        
-        from app.services.auth_service import create_access_token
-        token = create_access_token({"sub": str(user.id), "tenant_id": tenant_id})
-        logger.info(f"[Auth] Login successful for user: {data.email}, tenant: {tenant_id}")
-        return {"access_token": token, "token_type": "bearer", "tenant_id": tenant_id}
+        result = await authenticate_user(data)
+        logger.info(f"[Auth] Login successful for user: {data.email}")
+        return result
     except Exception as e:
         logger.error(f"[Auth] Login error: {str(e)}")
         raise

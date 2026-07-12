@@ -3,14 +3,12 @@ from sqlalchemy.future import select
 from app.core.tenant import get_db_session
 from app.models.models import Order, OrderItem
 from app.schemas.billing import OrderCreate, OrderResponse
-from tracenest import trace
 import logging
 
 logger = logging.getLogger("tallyko")
 router = APIRouter(prefix="/billing", tags=["Billing"])
 
 @router.post("/orders", response_model=OrderResponse)
-@trace(name="billing_create_order")
 async def create_order(request: Request, data: OrderCreate, db=Depends(get_db_session)):
     tenant_id = request.state.tenant_id if hasattr(request.state, 'tenant_id') else "default-tenant-uuid"
     logger.info(f"[Billing] Creating new order for tenant {tenant_id} at location {data.location_id}")

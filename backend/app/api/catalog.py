@@ -4,14 +4,12 @@ from sqlalchemy.future import select
 from app.core.tenant import get_db_session
 from app.models.models import Product, ProductCategory
 from app.schemas.catalog import ProductCreate, ProductResponse, CategoryCreate, CategoryResponse
-from tracenest import trace
 import logging
 
 logger = logging.getLogger("tallyko")
 router = APIRouter(prefix="/catalog", tags=["Catalog"])
 
 @router.post("/categories", response_model=CategoryResponse)
-@trace(name="catalog_create_category")
 async def create_category(request: Request, data: CategoryCreate, db=Depends(get_db_session)):
     tenant_id = request.state.tenant_id if hasattr(request.state, 'tenant_id') else "default-tenant-uuid"
     logger.info(f"[Catalog] Creating category '{data.name}' for tenant {tenant_id}")
@@ -23,7 +21,6 @@ async def create_category(request: Request, data: CategoryCreate, db=Depends(get
     return new_cat
 
 @router.get("/products", response_model=List[ProductResponse])
-@trace(name="catalog_get_products")
 async def get_products(request: Request, db=Depends(get_db_session)):
     tenant_id = request.state.tenant_id if hasattr(request.state, 'tenant_id') else "default-tenant-uuid"
     result = await db.execute(select(Product).where(Product.tenant_id == tenant_id))

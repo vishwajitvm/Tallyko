@@ -73,6 +73,12 @@ app.include_router(analytics.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
 app.include_router(online_store.router, prefix="/api/v1")
 
+try:
+    from tracenest.ui.router import router as tracenest_ui_router
+    app.include_router(tracenest_ui_router)
+except ImportError as e:
+    logger.warning(f"Could not load tracenest UI router: {e}")
+
 # Health endpoint
 @app.get("/health", tags=["Health"])
 async def health_check():
