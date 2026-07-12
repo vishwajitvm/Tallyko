@@ -24,6 +24,8 @@ services:
       dockerfile: Dockerfile
     container_name: tallyko-backend
     restart: always
+    ports:
+      - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/tallyko_shared
       - REDIS_URL=redis://cache:6379/0
