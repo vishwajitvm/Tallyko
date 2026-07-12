@@ -1,0 +1,92 @@
+<mxfile host="Electron" modified="2023-10-27T00:00:00.000Z" agent="Mozilla/5.0" version="22.0.4" type="device">
+  <diagram id="erd-diag" name="Database ERD">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Tables -->
+        <mxCell id="t_vendor" value="GLOBAL_VENDOR&#10;+ id (PK)&#10;+ name&#10;+ plan_type" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="50" y="50" width="160" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="t_location" value="LOCATION&#10;+ id (PK)&#10;+ tenant_id (FK)&#10;+ address" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="280" y="50" width="160" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t_category" value="PRODUCT_CATEGORY&#10;+ id (PK)&#10;+ tenant_id (FK)&#10;+ name" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="510" y="50" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t_product" value="PRODUCT&#10;+ id (PK)&#10;+ tenant_id (FK)&#10;+ category_id (FK)&#10;+ name&#10;+ base_price" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="760" y="50" width="160" height="120" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="t_variant" value="PRODUCT_VARIANT&#10;+ id (PK)&#10;+ product_id (FK)&#10;+ variant_name&#10;+ price_modifier" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="970" y="50" width="180" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t_table" value="TABLE&#10;+ id (PK)&#10;+ location_id (FK)&#10;+ table_number" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="50" y="250" width="160" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t_order" value="ORDER&#10;+ id (PK)&#10;+ location_id (FK)&#10;+ table_id (FK)&#10;+ total_amount" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="280" y="250" width="160" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t_orderitem" value="ORDER_ITEM&#10;+ id (PK)&#10;+ order_id (FK)&#10;+ product_id (FK)&#10;+ quantity&#10;+ subtotal" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="510" y="250" width="160" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t_payment" value="PAYMENT&#10;+ id (PK)&#10;+ order_id (FK)&#10;+ method&#10;+ amount" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="280" y="450" width="160" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="t_inventory" value="INVENTORY_LOG&#10;+ id (PK)&#10;+ product_id (FK)&#10;+ location_id (FK)&#10;+ quantity_change" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="760" y="250" width="180" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e_l_v" edge="1" parent="1" source="t_location" target="t_vendor">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_c_l" edge="1" parent="1" source="t_category" target="t_location">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_p_c" edge="1" parent="1" source="t_product" target="t_category">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_pv_p" edge="1" parent="1" source="t_variant" target="t_product">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="e_t_l" edge="1" parent="1" source="t_table" target="t_location">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="e_o_l" edge="1" parent="1" source="t_order" target="t_location">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_o_t" edge="1" parent="1" source="t_order" target="t_table">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="e_oi_o" edge="1" parent="1" source="t_orderitem" target="t_order">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_oi_p" edge="1" parent="1" source="t_orderitem" target="t_product">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="e_pay_o" edge="1" parent="1" source="t_payment" target="t_order">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="e_inv_p" edge="1" parent="1" source="t_inventory" target="t_product">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

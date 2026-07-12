@@ -1,0 +1,69 @@
+<mxfile host="Electron" modified="2023-10-27T00:00:00.000Z" agent="Mozilla/5.0" version="22.0.4" type="device">
+  <diagram id="flow-diagram" name="Offline Order Flow Step-by-Step">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Step 1: Cashier -->
+        <mxCell id="step1" value="Step 1: Order Entry&#10;Cashier scans barcode or taps product." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="50" y="100" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Step 2: Local DB Write -->
+        <mxCell id="step2" value="Step 2: Offline Save&#10;App writes Order to local SQLite DB&#10;(status: pending_sync)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="300" y="100" width="180" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Step 3: Hardware -->
+        <mxCell id="step3_print" value="Step 3A: Receipt Print&#10;Send ESC/POS commands&#10;over Bluetooth instantly" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="50" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="step3_kds" value="Step 3B: KDS Update&#10;Send KOT over Local LAN Wi-Fi" style="shape=display;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="160" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Step 4: Sync Engine -->
+        <mxCell id="step4" value="Step 4: Background Sync&#10;When internet is restored, Sync Engine&#10;POST /sync/push to Backend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="300" y="320" width="180" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Step 5: Backend Validate -->
+        <mxCell id="step5" value="Step 5: Cloud Transaction&#10;FastAPI validates JWT and tenant.&#10;Executes ACID transaction in Postgres." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="550" y="320" width="180" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Step 6: Confirmation -->
+        <mxCell id="step6" value="Step 6: Sync Success&#10;Local SQLite DB updates Order&#10;(status: synced)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="50" y="320" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="e1" edge="1" parent="1" source="step1" target="step2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="e2" edge="1" parent="1" source="step2" target="step3_print">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="510" y="90" /></Array></mxGeometry>
+        </mxCell>
+        
+        <mxCell id="e3" edge="1" parent="1" source="step2" target="step3_kds">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="510" y="200" /></Array></mxGeometry>
+        </mxCell>
+        
+        <mxCell id="e4" edge="1" parent="1" source="step2" target="step4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="e5" edge="1" parent="1" source="step4" target="step5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="e6" edge="1" parent="1" source="step5" target="step6">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="640" y="440" /><mxPoint x="130" y="440" /></Array></mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

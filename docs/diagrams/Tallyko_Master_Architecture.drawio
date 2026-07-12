@@ -1,0 +1,153 @@
+<mxfile host="Electron" modified="2023-10-27T00:00:00.000Z" agent="Mozilla/5.0" version="22.0.4" type="device">
+  <diagram id="master-diag" name="Master System Topology">
+    <mxGraphModel dx="1400" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Massive Group Boxes -->
+        <mxCell id="zone_users" value="Clients &amp; Hardware" style="swimlane;whiteSpace=wrap;html=1;fillColor=#dae8fc;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="220" height="760" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="zone_cloud" value="Cloud Infrastructure (AWS / Hetzner)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="280" y="20" width="1080" height="760" as="geometry" />
+        </mxCell>
+        
+        <!-- CI/CD Box -->
+        <mxCell id="zone_cicd" value="CI / CD GitHub Actions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="600" y="800" width="400" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Clients Inside Zone -->
+        <mxCell id="c_pos" value="Offline POS Terminal&#10;(React Native + SQLite)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="zone_users">
+          <mxGeometry x="30" y="60" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="c_kds" value="KDS Screen" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="zone_users">
+          <mxGeometry x="30" y="180" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c_qr" value="Customer QR Menu&#10;(Web Browser)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="zone_users">
+          <mxGeometry x="30" y="280" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c_dash" value="Owner Dashboard&#10;(React SPA)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="zone_users">
+          <mxGeometry x="30" y="380" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c_print" value="Bluetooth Thermal Printer" style="shape=document;whiteSpace=wrap;html=1;" vertex="1" parent="zone_users">
+          <mxGeometry x="30" y="500" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Local connections -->
+        <mxCell id="e_local_1" edge="1" parent="zone_users" source="c_pos" target="c_print">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="10" y="100" /><mxPoint x="10" y="530" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e_local_2" edge="1" parent="zone_users" source="c_pos" target="c_kds">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="10" y="100" /><mxPoint x="10" y="210" /></Array></mxGeometry>
+        </mxCell>
+
+        <!-- Edge inside Cloud -->
+        <mxCell id="edge_proxy" value="Traefik Proxy&#10;(Load Balancer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="zone_cloud">
+          <mxGeometry x="40" y="180" width="120" height="260" as="geometry" />
+        </mxCell>
+
+        <!-- API inside Cloud -->
+        <mxCell id="api_pool" value="FastAPI Server Pool (Stateless)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="zone_cloud">
+          <mxGeometry x="240" y="60" width="220" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="api_1" value="API Instance 1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="api_pool">
+          <mxGeometry x="40" y="60" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="api_2" value="API Instance 2" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="api_pool">
+          <mxGeometry x="40" y="160" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="api_3" value="API Instance 3" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="api_pool">
+          <mxGeometry x="40" y="260" width="140" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Worker inside Cloud -->
+        <mxCell id="worker_pool" value="Celery Async Workers" style="swimlane;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="zone_cloud">
+          <mxGeometry x="240" y="480" width="220" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="w_1" value="Task Worker" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="worker_pool">
+          <mxGeometry x="40" y="60" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="w_2" value="Task Worker" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="worker_pool">
+          <mxGeometry x="40" y="150" width="140" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Data inside Cloud -->
+        <mxCell id="db_global" value="Postgres&#10;(Global Routing DB)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="zone_cloud">
+          <mxGeometry x="600" y="60" width="160" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="db_shared" value="Postgres&#10;(Shared Tenant DB + RLS)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="zone_cloud">
+          <mxGeometry x="600" y="220" width="160" height="120" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="db_ded" value="Postgres&#10;(Dedicated VIP Tenants)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="zone_cloud">
+          <mxGeometry x="600" y="400" width="160" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="redis" value="Redis&#10;(Message Broker &amp; Cache)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="zone_cloud">
+          <mxGeometry x="880" y="220" width="160" height="120" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="minio" value="MinIO&#10;(Object S3 Storage)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone_cloud">
+          <mxGeometry x="880" y="400" width="160" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Cross-Zone Edges -->
+        <mxCell id="e_pos_edge" edge="1" parent="1" source="c_pos" target="edge_proxy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_qr_edge" edge="1" parent="1" source="c_qr" target="edge_proxy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_dash_edge" edge="1" parent="1" source="c_dash" target="edge_proxy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Proxy to APIs -->
+        <mxCell id="e_p_a1" edge="1" parent="zone_cloud" source="edge_proxy" target="api_1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_p_a2" edge="1" parent="zone_cloud" source="edge_proxy" target="api_2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_p_a3" edge="1" parent="zone_cloud" source="edge_proxy" target="api_3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API to DBs -->
+        <mxCell id="e_a2_dbg" edge="1" parent="zone_cloud" source="api_2" target="db_global">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_a2_dbs" edge="1" parent="zone_cloud" source="api_2" target="db_shared">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_a2_dbd" edge="1" parent="zone_cloud" source="api_3" target="db_ded">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_a2_rd" edge="1" parent="zone_cloud" source="api_2" target="redis">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="800" y="220" /></Array></mxGeometry>
+        </mxCell>
+
+        <!-- Worker to DBs -->
+        <mxCell id="e_w1_rd" edge="1" parent="zone_cloud" source="w_1" target="redis">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="960" y="570" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e_w1_dbs" edge="1" parent="zone_cloud" source="w_1" target="db_shared">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="680" y="570" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e_w2_minio" edge="1" parent="zone_cloud" source="w_2" target="minio">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="960" y="660" /></Array></mxGeometry>
+        </mxCell>
+
+        <!-- CI/CD Push Edge -->
+        <mxCell id="e_cicd" edge="1" parent="1" source="zone_cicd" target="api_pool">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="400" y="840" /></Array></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
