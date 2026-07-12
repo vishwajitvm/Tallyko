@@ -176,3 +176,14 @@ class Customer(Base):
     phone = Column(String, nullable=False)
     email = Column(String, nullable=True)
     points = Column(Integer, default=0, nullable=False)
+
+class KOT(Base):
+    __tablename__ = "kots"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False)
+    status = Column(String, default="pending", nullable=False) # pending, preparing, ready
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    order = relationship("Order")

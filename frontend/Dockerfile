@@ -1,12 +1,18 @@
-# Build container only for packaging and building APK/IPA in CI/CD pipeline
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
+# Copy package files
+COPY package.json package-lock.json* ./
 
+# Install dependencies
+RUN npm install --legacy-peer-deps
+
+# Copy rest of the frontend code
 COPY . .
 
-# Stub command for build verification
-CMD ["npm", "run", "lint"]
+# Expose Expo Web port
+EXPOSE 8081
+
+# Command to run Expo in web mode
+CMD ["npx", "expo", "start", "--web", "--clear"]

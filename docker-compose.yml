@@ -26,8 +26,10 @@ services:
     restart: always
     ports:
       - "8000:8000"
+    volumes:
+      - ./backend:/app
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/tallyko_shared
+      - DATABASE_URL=postgresql+asyncpg://postgres:password_to_change_in_prod@db:5432/tallyko_shared
       - REDIS_URL=redis://cache:6379/0
       - MINIO_ENDPOINT=storage:9000
     depends_on:
@@ -70,6 +72,21 @@ services:
       - minio_data:/data
     networks:
       - tallyko_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tallyko-frontend
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - tallyko_net
+    environment:
+      - CHOKIDAR_USEPOLLING=true
 
 networks:
   tallyko_net:
