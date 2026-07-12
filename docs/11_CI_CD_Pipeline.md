@@ -10,10 +10,11 @@ No developer is permitted to manually deploy code to production. All changes mus
 
 The pipeline is triggered upon pushing to specific branches (`main` for production, `staging` for the test environment).
 
-### Stage 1: Integration & Testing
+### Stage 1: Integration, Testing & Security Auditing
+*   **Workflow file:** `.github/workflows/ci.yml` is executed on every push and pull request.
+*   **Security Auditing:** Runs `pip-audit` for the Python backend and `npm audit` for the React Native frontend to catch vulnerable transitive dependencies.
 *   **Linting & Formatting:** Enforces Python (PEP8/Black) and JavaScript/TypeScript (Prettier/ESLint) standards.
-*   **Unit Tests:** Executes automated tests against the FastAPI backend and React Native components.
-*   **Database Migration Tests:** Attempts to run Alembic migrations against an ephemeral Postgres container to ensure schema changes do not crash.
+*   **Unit Tests:** Executes automated tests via `pytest` against the FastAPI backend, utilizing a dynamically injected `NullPool` database connection to ensure isolated test environments.
 
 ### Stage 2: Build & Package
 *   **Backend:** Docker images for the API and Worker are built and tagged with the git commit hash.

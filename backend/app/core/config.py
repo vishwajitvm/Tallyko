@@ -12,6 +12,13 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # Variables passed from docker-compose / .env but not strictly used inside FastAPI
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "password_to_change_in_prod"
+    POSTGRES_DB: str = "tallyko_shared"
+    MINIO_ROOT_USER: str = "minio_admin"
+    MINIO_ROOT_PASSWORD: str = "minio_password_to_change"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

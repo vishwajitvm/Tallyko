@@ -4,6 +4,22 @@
 
 Tallyko maintains strict separation between environments to ensure that development and testing activities never impact production data or stability.
 
+### Local Development
+
+For local development, we use `docker-compose.yml` supplemented by a `.env` file. We have transitioned away from hardcoded variables inside `docker-compose.yml` to a strictly `.env`-driven configuration to prevent secret leakage.
+
+1. **`.env` File (Required):**
+   Copy `.env.example` to `.env` in the root directory. This file dictates your local Postgres passwords, Redis URLs, MinIO keys, and the JWT Secret.
+
+2. **Docker Compose Overrides:**
+   The `docker-compose.yml` now utilizes variable interpolation (e.g., `${POSTGRES_USER:-postgres}`). If the `.env` file is missing, it falls back to default values for ease of onboarding, but a `.env` file is highly recommended.
+
+3. **Running Local Environment:**
+   ```bash
+   # Make sure your .env is configured
+   docker-compose up --build
+   ```
+
 We define three primary environments:
 1.  **Local (Development):** Running on a developer's machine using `docker-compose.yml`.
 2.  **Staging:** An exact replica of the production infrastructure, but with anonymized or synthetic data. Used for final QA before release.

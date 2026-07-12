@@ -14,9 +14,11 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:password_to_change_in_prod@db:5432/tallyko_shared
-      - REDIS_URL=redis://cache:6379/0
-      - MINIO_ENDPOINT=storage:9000
+      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://postgres:password_to_change_in_prod@db:5432/tallyko_shared}
+      - REDIS_URL=${REDIS_URL:-redis://cache:6379/0}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-storage:9000}
+      - JWT_SECRET=${JWT_SECRET:-generate_a_secure_random_key_here}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
     depends_on:
       - db
       - cache
@@ -28,9 +30,9 @@ services:
     container_name: tallyko-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password_to_change_in_prod
-      POSTGRES_DB: tallyko_shared
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password_to_change_in_prod}
+      POSTGRES_DB: ${POSTGRES_DB:-tallyko_shared}
     volumes:
       - pg_data:/var/lib/postgresql/data
     networks:
@@ -51,8 +53,8 @@ services:
     restart: always
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minio_admin
-      MINIO_ROOT_PASSWORD: minio_password_to_change
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio_password_to_change}
     volumes:
       - minio_data:/data
     networks:

@@ -40,13 +40,23 @@ The technology stack for Tallyko is strictly governed by the following constrain
 *   **Storage Server:** **MinIO**
     *   *Justification:* An open-source, S3-compatible object storage server that can be self-hosted. Perfect for storing user uploads, AI-processed PDFs, product images, and digital receipts without paying AWS/GCP fees.
 
-### F. Infrastructure & Deployment
+### F. Security & Auth
+*   **Token Storage:** **Expo SecureStore**
+    *   *Justification:* Provides encrypted, native secure storage (Keychain on iOS, Keystore on Android) to safely hold JWT Access and Refresh tokens instead of plaintext `AsyncStorage`.
+*   **Security Auditing:** **pip-audit & npm audit**
+    *   *Justification:* Integrated directly into the GitHub Actions CI pipeline to proactively scan dependency trees for known vulnerabilities before merging PRs.
+
+### G. AI & Processing
+*   **OCR Engine:** **Tesseract OCR (pytesseract)**
+    *   *Justification:* Fully open-source and free vision engine used to parse menu images directly on the backend without relying on paid, proprietary APIs like OpenAI.
+
+### H. Infrastructure & Deployment
 *   **Containerization:** **Docker & Docker Compose**
     *   *Justification:* Ensures consistency across environments. Every dependency runs in isolation.
 *   **Reverse Proxy / API Gateway:** **Traefik** or **Nginx**
     *   *Justification:* Traefik provides dynamic routing and automatic SSL (Let's Encrypt), crucial for routing traffic to dedicated vendor DB instances or specific tenant domains seamlessly.
 
-### G. Observability & Monitoring
+### I. Observability & Monitoring
 *   **Logging:** **tracenest** (Python Package)
     *   *Justification:* Mandated by requirements. Tracenest will be integrated into FastAPI middleware and Celery workers to emit structured logs.
 *   **Log Aggregation (Assumed):** **Grafana Loki + Promtail** (or ELK stack)

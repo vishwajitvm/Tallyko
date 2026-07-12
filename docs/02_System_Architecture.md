@@ -26,10 +26,15 @@ The core logic resides in Python/FastAPI. The API is stateless, meaning any inst
 Heavy tasks are offloaded to asynchronous workers (Celery/ARQ) via Redis.
 *   **Tasks include:** Sending bulk CRM emails/SMS, generating heavy PDF reports, processing AI menu uploads, and aggregating analytics.
 
-### D. Data Stores
+### D. Security & Stability Layers
+*   **Rate Limiting:** A Redis-backed sliding-window rate limiter protects public and authenticated endpoints against brute-force and DoS attacks (e.g., locking `/auth/login` to 10 req/min).
+*   **Global Exception Boundaries:** Top-level handlers automatically intercept `HTTPException` and validation errors to ensure pure, schema-compliant JSON is returned instead of stack traces.
+*   **Test-Environment Isolation:** During automated testing (`pytest`), the database dependency injector dynamically downgrades from `AsyncEngine` pooling to a `NullPool` to guarantee strictly isolated, crosstalk-free connections across asynchronous test event loops.
+
+### E. Data Stores
 *   **Central Postgres:** Houses the global directory (users, tenant mapping, billing contracts) and the shared tenant data.
 *   **Dedicated Postgres:** Isolated instances running for specific high-value vendors.
-*   **Redis:** Caches frequently accessed data (like menu items), manages API rate limits, and queues background jobs.
+*   **Redis:** Caches frequently accessed data, manages API sliding-window rate limits, and queues background jobs.
 *   **MinIO:** Stores static assets, product images, and receipt PDFs.
 
 ## 3. Global Architecture Diagram

@@ -24,8 +24,12 @@ Authentication utilizes stateless JSON Web Tokens (JWT).
           "exp": 1698408000
         }
         ```
-4.  **Refresh Tokens:** A long-lived refresh token is stored securely (HttpOnly cookie for Web, Secure Enclave/Keystore for Mobile). When the short-lived JWT expires, the client uses the refresh token to obtain a new one without requiring re-login.
+4.  **Refresh Tokens:** A long-lived refresh token is stored securely via **Expo SecureStore** on mobile devices, leveraging the native hardware keystore (Keychain on iOS, Keystore on Android). When the short-lived JWT expires, the `api.js` Axios interceptor automatically catches the `401 Unauthorized` response, uses the refresh token to obtain a new access token, and retries the request seamlessly.
 
+## 2.5 API Hardening & Abuse Prevention
+
+*   **Rate Limiting:** A Redis-backed sliding-window rate limiter protects endpoints from brute force and DoS attacks. For example, `/auth/login` is strictly limited to 10 requests per minute per IP address.
+*   **Global Exception Boundaries:** Top-level handlers in `main.py` intercept unhandled `HTTPException` and `RequestValidationError` errors. This prevents 500 stack traces from leaking server internals to the client, enforcing a strict `{"success": false, "message": "..."}` JSON schema.
 ## 3. Role-Based Access Control (RBAC)
 
 Within a single tenant, different staff members have different permissions.
