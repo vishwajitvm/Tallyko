@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import func
-from app.db.database import get_db
+from app.core.tenant import get_db_session
 from app.models.models import Order
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 @router.get("/dashboard")
-async def get_dashboard(db: AsyncSession = Depends(get_db)):
+async def get_dashboard(db: AsyncSession = Depends(get_db_session)):
     # Calculate Total Revenue
     revenue_result = await db.execute(select(func.sum(Order.total_amount)).where(Order.status == 'completed'))
     total_revenue = revenue_result.scalar() or 0.0

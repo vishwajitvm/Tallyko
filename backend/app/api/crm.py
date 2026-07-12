@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.db.database import get_db
+from app.core.tenant import get_db_session
 from app.models.models import Customer
 from typing import List
 
 router = APIRouter(prefix="/crm", tags=["Crm"])
 
 @router.get("/customers")
-async def get_customers(db: AsyncSession = Depends(get_db)):
+async def get_customers(db: AsyncSession = Depends(get_db_session)):
     result = await db.execute(select(Customer))
     customers = result.scalars().all()
     
@@ -31,5 +31,5 @@ async def get_customers(db: AsyncSession = Depends(get_db)):
     ]
 
 @router.post("/customers")
-async def create_customer(name: str, phone: str, db: AsyncSession = Depends(get_db)):
+async def create_customer(name: str, phone: str, db: AsyncSession = Depends(get_db_session)):
     return {"message": "Customer created"}

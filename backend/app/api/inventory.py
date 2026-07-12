@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.db.database import get_db
+from app.core.tenant import get_db_session
 from app.models.models import Product, InventoryLog
 from typing import List
 
 router = APIRouter(prefix="/inventory", tags=["Inventory"])
 
 @router.get("/")
-async def get_inventory(db: AsyncSession = Depends(get_db)):
+async def get_inventory(db: AsyncSession = Depends(get_db_session)):
     # Fetch all products and mock inventory sum for MVP
     # In production, this would be a JOIN with SUM(InventoryLog.quantity_change)
     result = await db.execute(select(Product))

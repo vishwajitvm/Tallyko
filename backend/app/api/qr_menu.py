@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.db.database import get_db
+from app.core.tenant import get_db_session
 from app.models.models import Product
 
 router = APIRouter(prefix="/qr-menu", tags=["QR Menu"])
 
 @router.get("/{tenant_id}")
-async def get_qr_menu(tenant_id: str, db: AsyncSession = Depends(get_db)):
+async def get_qr_menu(tenant_id: str, db: AsyncSession = Depends(get_db_session)):
     # Returns products for a tenant directly (public access for QR menus)
     result = await db.execute(select(Product).where(Product.tenant_id == tenant_id, Product.is_active == True))
     products = result.scalars().all()
