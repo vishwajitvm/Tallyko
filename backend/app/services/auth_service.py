@@ -3,7 +3,7 @@ from sqlalchemy.future import select
 from fastapi import HTTPException, status
 from app.models.models import GlobalVendor, GlobalUser, TenantConfig, TenantUser, Location
 from app.schemas.auth import VendorSignupRequest, LoginRequest, TokenResponse
-from app.core.security import get_password_hash, verify_password, create_access_token
+from app.core.security import get_password_hash, verify_password, create_access_token, create_refresh_token
 from app.core.tenant import SharedSessionLocal
 
 from sqlalchemy.exc import IntegrityError
@@ -100,10 +100,94 @@ async def authenticate_user(login_data: LoginRequest) -> TokenResponse:
             "role": tenant_user.role
         }
         
-        token = create_access_token(data=token_data)
+        access_token = create_access_token(data=token_data)
+        refresh_token_str = create_refresh_token(data={"sub": str(user.id)})
         
         return TokenResponse(
-            access_token=token,
+            success=True,
+            access_token=access_token,
+            refresh_token=refresh_token_str,
             tenant_id=tenant_user.tenant_id,
             role=tenant_user.role
         )
+
+from app.schemas.auth import RefreshRequest, InviteRequest
+from jose import jwt, JWTError
+from app.core.config import settings
+
+async def refresh_token(refresh_data: RefreshRequest) -> TokenResponse:
+    try:
+        payload = jwt.decode(refresh_data.refresh_token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        user_id = payload.get("sub")
+        token_type = payload.get("type")
+        if user_id is None or token_type != "refresh":
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    async with SharedSessionLocal() as session:
+        # Fetch the user and tenant logic similar to login
+        user_result = await session.execute(select(GlobalUser).where(GlobalUser.id == user_id))
+        user = user_result.scalars().first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+            
+        tenant_result = await session.execute(
+            select(TenantUser).where(TenantUser.username == user.email)
+        )
+        tenant_user = tenant_result.scalars().first()
+        if not tenant_user:
+            raise HTTPException(status_code=401, detail="User is not associated with any tenant")
+            
+        token_data = {
+            "sub": str(user.id),
+            "tenant_id": str(tenant_user.tenant_id),
+            "role": tenant_user.role
+        }
+        
+        access_token = create_access_token(data=token_data)
+        new_refresh_token_str = create_refresh_token(data={"sub": str(user.id)})
+        
+        return TokenResponse(
+            success=True,
+            access_token=access_token,
+            refresh_token=new_refresh_token_str,
+            tenant_id=tenant_user.tenant_id,
+            role=tenant_user.role
+        )
+
+async def invite_user(invite_data: InviteRequest, tenant_id: str):
+    async with SharedSessionLocal() as session:
+        # Check if they are already in the system globally
+        existing_user = await session.execute(
+            select(GlobalUser).where(GlobalUser.email == invite_data.email)
+        )
+        user = existing_user.scalars().first()
+        
+        if not user:
+            # We would typically send an invite email here with a signup link.
+            # But we'll create a stub global user for now without a password so they can set it later.
+            user = GlobalUser(
+                email=invite_data.email,
+                phone="",
+                password_hash="" # Requires a password set flow in real world
+            )
+            session.add(user)
+            await session.flush()
+            
+        # Add them to the tenant
+        existing_tenant_user = await session.execute(
+            select(TenantUser).where(TenantUser.username == invite_data.email).where(TenantUser.tenant_id == tenant_id)
+        )
+        if existing_tenant_user.scalars().first():
+            raise HTTPException(status_code=400, detail="User is already part of this tenant")
+            
+        tenant_user = TenantUser(
+            tenant_id=tenant_id,
+            username=invite_data.email,
+            role=invite_data.role,
+            password_hash=user.password_hash
+        )
+        session.add(tenant_user)
+        await session.commit()
+        return {"success": True, "message": f"Successfully invited {invite_data.email} as {invite_data.role}"}

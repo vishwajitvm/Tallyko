@@ -14,7 +14,16 @@ class LoginRequest(BaseModel):
     password: str
 
 class TokenResponse(BaseModel):
+    success: bool = True
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     tenant_id: UUID
+    role: str
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+class InviteRequest(BaseModel):
+    email: EmailStr
     role: str

@@ -71,7 +71,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 content={"success": False, "error": {"code": "INTERNAL_SERVER_ERROR", "message": "An unexpected error occurred."}}
             )
 
-from app.api import auth, catalog, billing, tables, kitchen, inventory, crm, analytics, ai, online_store
+from app.api import auth, catalog, billing, analytics, kitchen, inventory, tables, online_store, crm, ai, sync
 
 app = FastAPI(
     title="Tallyko POS Backend",
@@ -84,13 +84,14 @@ app.add_middleware(TracingMiddleware)
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(catalog.router, prefix="/api/v1")
 app.include_router(billing.router, prefix="/api/v1")
-app.include_router(tables.router, prefix="/api/v1")
+app.include_router(analytics.router, prefix="/api/v1")
 app.include_router(kitchen.router, prefix="/api/v1")
 app.include_router(inventory.router, prefix="/api/v1")
-app.include_router(crm.router, prefix="/api/v1")
-app.include_router(analytics.router, prefix="/api/v1")
-app.include_router(ai.router, prefix="/api/v1")
+app.include_router(tables.router, prefix="/api/v1")
 app.include_router(online_store.router, prefix="/api/v1")
+app.include_router(crm.router, prefix="/api/v1")
+app.include_router(ai.router, prefix="/api/v1")
+app.include_router(sync.router, prefix="/api/v1")
 
 try:
     from tracenest.ui.router import router as tracenest_ui_router

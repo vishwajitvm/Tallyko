@@ -92,6 +92,7 @@ class Product(Base):
     base_price = Column(Numeric(10, 2), nullable=False)
     barcode = Column(String, nullable=True, index=True)
     print_to_kitchen = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
 
     category = relationship("ProductCategory")
 

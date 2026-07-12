@@ -13,16 +13,25 @@ class CategoryResponse(BaseModel):
 
 class ProductCreate(BaseModel):
     name: str
-    price: float
+    base_price: float
     category_id: Optional[UUID] = None
-    sku: Optional[str] = None
     barcode: Optional[str] = None
+    print_to_kitchen: bool = False
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    base_price: Optional[float] = None
+    category_id: Optional[UUID] = None
+    barcode: Optional[str] = None
+    print_to_kitchen: Optional[bool] = None
+    is_active: Optional[bool] = None
 
 class ProductResponse(BaseModel):
     id: UUID
     name: str
-    price: float
+    base_price: float
     category_id: Optional[UUID]
     is_active: bool
+    print_to_kitchen: bool
     class Config:
         orm_mode = True
