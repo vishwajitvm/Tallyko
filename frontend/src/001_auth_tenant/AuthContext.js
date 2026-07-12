@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -8,7 +9,7 @@ const AuthContext = createContext();
 // Since backend is exposed on port 8000 via docker-compose, we can use 10.0.2.2 for Android simulator or localhost for web/iOS.
 // For now we'll use a configurable base URL, assuming it runs on localhost/127.0.0.1 for Web.
 // If testing on a physical device or simulator, you may need to use your local IP address.
-const API_URL = 'http://127.0.0.1:8000/api/v1'; 
+const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8000/api/v1' : 'http://127.0.0.1:8000/api/v1'; 
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
