@@ -125,9 +125,11 @@ class Order(Base):
     tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     table_id = Column(UUID(as_uuid=True), ForeignKey("tables.id"), nullable=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=True)
     total_amount = Column(Numeric(10, 2), nullable=False)
     type = Column(String, nullable=False)  # 'DINE_IN', 'TAKEAWAY', 'DELIVERY', 'RETAIL_WALKIN'
     status = Column(String, default="pending", nullable=False)  # 'pending', 'completed'
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class OrderItem(Base):

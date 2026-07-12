@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Alert , Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Alert, Platform, Modal, TextInput } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../001_auth_tenant/AuthContext';
 import axios from 'axios';
@@ -13,6 +13,10 @@ export default function StockScreen() {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [quantityToAdd, setQuantityToAdd] = useState('');
 
   const fetchInventory = async () => {
     try {
@@ -38,6 +42,31 @@ export default function StockScreen() {
     fetchInventory();
   };
 
+  const handleReceiveStock = async () => {
+    if (!selectedProduct || !quantityToAdd || isNaN(quantityToAdd) || parseInt(quantityToAdd) <= 0) {
+      Alert.alert('Invalid Input', 'Please enter a valid quantity.');
+      return;
+    }
+
+    try {
+      await axios.post(`${API_URL}/inventory/receive`, {
+        product_id: selectedProduct.id,
+        quantity: parseInt(quantityToAdd),
+        location_id: '00000000-0000-0000-0000-000000000000' // Mock location for now
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      Alert.alert("Success", "Stock received successfully!");
+      setModalVisible(false);
+      setQuantityToAdd('');
+      setSelectedProduct(null);
+      fetchInventory();
+    } catch (error) {
+      console.error("Failed to receive inventory", error);
+      Alert.alert("Error", "Could not receive inventory.");
+    }
+  };
+
   const renderStockItem = ({ item }) => {
     const isLowStock = item.stock_count <= item.low_stock_threshold;
     
@@ -54,6 +83,15 @@ export default function StockScreen() {
           {isLowStock && (
             <Text style={[styles.lowStockWarning, { color: '#FF3B30' }]}>Low Stock</Text>
           )}
+          <TouchableOpacity 
+            style={[styles.smallReceiveButton, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              setSelectedProduct(item);
+              setModalVisible(true);
+            }}
+          >
+            <Text style={styles.smallReceiveButtonText}>Receive</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -63,9 +101,6 @@ export default function StockScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Inventory</Text>
-        <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]}>
-          <Text style={styles.addButtonText}>Receive Stock</Text>
-        </TouchableOpacity>
       </View>
 
       {loading && !refreshing ? (
@@ -87,6 +122,50 @@ export default function StockScreen() {
           }
         />
       )}
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => {
+          setModalVisible(false);
+          setQuantityToAdd('');
+          setSelectedProduct(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalView, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Receive Stock</Text>
+            {selectedProduct && <Text style={{ color: colors.text, marginBottom: 15 }}>Product: {selectedProduct.name}</Text>}
+            <TextInput
+              style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+              placeholder="Quantity to add"
+              placeholderTextColor={colors.secondary}
+              keyboardType="numeric"
+              value={quantityToAdd}
+              onChangeText={setQuantityToAdd}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.border }]}
+                onPress={() => {
+                  setModalVisible(false);
+                  setQuantityToAdd('');
+                  setSelectedProduct(null);
+                }}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleReceiveStock}
+              >
+                <Text style={styles.modalButtonText}>Receive</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -125,5 +204,14 @@ const styles = StyleSheet.create({
   stockCategory: { fontSize: 14 },
   stockCountContainer: { alignItems: 'flex-end', paddingLeft: 16 },
   stockCount: { fontSize: 18, fontWeight: 'bold' },
-  lowStockWarning: { fontSize: 12, fontWeight: 'bold', marginTop: 4 }
+  lowStockWarning: { fontSize: 12, fontWeight: 'bold', marginTop: 4 },
+  smallReceiveButton: { marginTop: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  smallReceiveButtonText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalView: { width: '80%', padding: 20, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15 },
+  input: { width: '100%', height: 50, borderWidth: 1, borderRadius: 10, paddingHorizontal: 15, marginBottom: 20 },
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  modalButton: { flex: 1, padding: 12, borderRadius: 10, alignItems: 'center', marginHorizontal: 5 },
+  modalButtonText: { fontSize: 16, fontWeight: 'bold' }
 });

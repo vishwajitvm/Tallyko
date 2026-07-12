@@ -13,4 +13,5 @@ The **root [VERSION](file:///c:/python/Tallyko/VERSION)** file is the single sou
 
 ## Release Index
 
+- **[v1.0.0 (2026-07-12)](file:///c:/python/Tallyko/changelog/v1.0.0.md)** - Feature completion: End-to-end POS, Inventory, KDS, Analytics, QR Menu, complete design system implementation, and mock Bluetooth Printer integration. All features have been completed.
 - **[v0.1.0 (2026-07-12)](file:///c:/python/Tallyko/changelog/v0.1.0.md)** - Scaffolding, architecture specs, and development environment setup.

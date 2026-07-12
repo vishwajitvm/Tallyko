@@ -43,19 +43,24 @@ export default function KdsScreen() {
 
   const [processingOrders, setProcessingOrders] = useState(new Set());
 
-  const completeOrder = async (orderId) => {
+  const updateOrderStatus = async (orderId, newStatus) => {
     if (processingOrders.has(orderId)) return;
     setProcessingOrders(prev => new Set(prev).add(orderId));
     try {
       await axios.put(`${API_URL}/kitchen/kds/orders/${orderId}/status`, 
-        { status: 'completed' },
+        { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      // Remove from list or refresh
-      setOrders(orders.filter(o => o.id !== orderId));
+      if (newStatus === 'ready') {
+        // Remove from list
+        setOrders(orders.filter(o => o.id !== orderId));
+      } else {
+        // Update status in list
+        setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      }
     } catch (error) {
       console.error("Failed to update order status", error);
-      Alert.alert("Error", "Could not mark order as completed.");
+      Alert.alert("Error", "Could not update order status.");
     } finally {
       setProcessingOrders(prev => {
         const next = new Set(prev);
@@ -67,16 +72,25 @@ export default function KdsScreen() {
 
   const renderOrder = ({ item }) => {
     const isProcessing = processingOrders.has(item.id);
+    const isPending = item.status === 'pending';
+    const btnColor = isPending ? '#FF9500' : '#34C759';
+    const btnText = isPending ? 'Mark Preparing' : 'Mark Ready';
+    const nextStatus = isPending ? 'preparing' : 'ready';
+
     return (
       <View style={[styles.orderCard, { backgroundColor: colors.surface, borderColor: colors.secondary + '30' }]}>
         <View style={styles.orderHeader}>
           <Text style={[styles.orderId, { color: colors.text }]}>Order #{item.id.substring(0, 8)}</Text>
-          <Text style={[styles.orderType, { backgroundColor: colors.secondary + '20', color: colors.secondary }]}>
-            {item.type}
-          </Text>
+          <View style={{ flexDirection: 'row', gap: 5 }}>
+            <Text style={[styles.orderType, { backgroundColor: colors.secondary + '20', color: colors.secondary }]}>
+              {item.type}
+            </Text>
+            <Text style={[styles.orderType, { backgroundColor: btnColor + '20', color: btnColor }]}>
+              {item.status.toUpperCase()}
+            </Text>
+          </View>
         </View>
         
-        {/* Mocking items since API currently returns empty array for items */}
         <View style={styles.itemList}>
           {item.items && item.items.length > 0 ? (
             item.items.map((prod, idx) => (
@@ -92,14 +106,14 @@ export default function KdsScreen() {
         </View>
 
         <TouchableOpacity 
-          style={[styles.completeBtn, { backgroundColor: isProcessing ? '#999' : '#34C759' }]} 
-          onPress={() => completeOrder(item.id)}
+          style={[styles.completeBtn, { backgroundColor: isProcessing ? '#999' : btnColor }]} 
+          onPress={() => updateOrderStatus(item.id, nextStatus)}
           disabled={isProcessing}
         >
           {isProcessing ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.completeBtnText}>Mark Completed</Text>
+            <Text style={styles.completeBtnText}>{btnText}</Text>
           )}
         </TouchableOpacity>
       </View>

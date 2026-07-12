@@ -1,14 +1,31 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Button } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { Camera } from 'expo-camera';
 
 export default function BarcodeScannerScreen() {
   const { colors } = useTheme();
   const [manualCode, setManualCode] = useState('');
+  const [hasPermission, setHasPermission] = useState(null);
+  const [scanned, setScanned] = useState(false);
+
+  useEffect(() => {
+    const getBarCodeScannerPermissions = async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+    };
+
+    getBarCodeScannerPermissions();
+  }, []);
+
+  const handleBarCodeScanned = ({ type, data }) => {
+    setScanned(true);
+    Alert.alert("Barcode Scanned!", `Type: ${type}\nData: ${data}`);
+  };
 
   const handleManualSearch = () => {
     if (!manualCode) return;
-    Alert.alert("Product Found", `Simulated lookup for barcode: ${manualCode}`);
+    Alert.alert("Product Found", `Lookup for barcode: ${manualCode}`);
     setManualCode('');
   };
 
@@ -20,12 +37,26 @@ export default function BarcodeScannerScreen() {
       </View>
       
       <View style={styles.content}>
-        {/* Mock Camera View */}
-        <View style={[styles.cameraMock, { backgroundColor: '#000', borderColor: colors.primary }]}>
-          <View style={[styles.scanLine, { backgroundColor: colors.primary }]} />
-          <Text style={styles.cameraText}>Camera Active...</Text>
-          <Text style={styles.cameraSubtext}>(Simulated for Emulator/Web)</Text>
-        </View>
+        {hasPermission === null ? (
+          <Text style={{ color: colors.text }}>Requesting for camera permission</Text>
+        ) : hasPermission === false ? (
+          <Text style={{ color: colors.text }}>No access to camera</Text>
+        ) : (
+          <View style={[styles.cameraMock, { backgroundColor: '#000', borderColor: colors.primary }]}>
+            <Camera
+              onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+              style={StyleSheet.absoluteFillObject}
+            />
+            {scanned && (
+              <TouchableOpacity 
+                style={[styles.rescanBtn, { backgroundColor: colors.primary }]} 
+                onPress={() => setScanned(false)}
+              >
+                <Text style={styles.searchBtnText}>Tap to Scan Again</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         <Text style={[styles.orText, { color: colors.secondary }]}>— OR —</Text>
 
@@ -67,18 +98,13 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden'
   },
-  scanLine: {
+  rescanBtn: {
     position: 'absolute',
-    top: '50%',
-    width: '100%',
-    height: 2,
-    shadowColor: '#fff',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
+    bottom: 20,
+    paddingHorizontal: 25,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
-  cameraText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  cameraSubtext: { color: '#aaa', fontSize: 14, marginTop: 5 },
   orText: { fontSize: 16, fontWeight: 'bold', marginBottom: 30 },
   manualEntry: {
     flexDirection: 'row',

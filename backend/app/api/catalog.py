@@ -21,6 +21,12 @@ async def create_category(request: Request, data: CategoryCreate, db=Depends(get
     logger.info(f"[Catalog] Successfully created category {new_cat.id}")
     return new_cat
 
+@router.get("/categories", response_model=List[CategoryResponse])
+async def get_categories(request: Request, db=Depends(get_db_session)):
+    tenant_id = request.state.tenant_id if hasattr(request.state, 'tenant_id') else "00000000-0000-0000-0000-000000000000"
+    result = await db.execute(select(ProductCategory).where(ProductCategory.tenant_id == tenant_id))
+    return result.scalars().all()
+
 @router.get("/products", response_model=List[ProductResponse])
 async def get_products(request: Request, db=Depends(get_db_session)):
     tenant_id = request.state.tenant_id if hasattr(request.state, 'tenant_id') else "00000000-0000-0000-0000-000000000000"

@@ -3,7 +3,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from typing import List
 from app.core.tenant import get_db_session
-from app.models.models import Order
+from app.models.models import KOT, Order, OrderItem, Product
 from app.schemas.kitchen import KDSOrderResponse, KDSOrderStatusUpdate
 import logging
 
@@ -14,48 +14,74 @@ router = APIRouter(prefix="/kitchen", tags=["Kitchen"])
 async def get_kds_orders(request: Request, db=Depends(get_db_session)):
     tenant_id = request.state.tenant_id if hasattr(request.state, 'tenant_id') else "00000000-0000-0000-0000-000000000000"
     
-    # We load orders along with their items to show on the KDS.
-    # In a real app we might only load orders that have items to print_to_kitchen, but we'll load all pending for now.
+    # Fetch pending and preparing KOTs
     result = await db.execute(
-        select(Order).where(
-            Order.tenant_id == tenant_id,
-            Order.status == "pending"
+        select(KOT).where(
+            KOT.tenant_id == tenant_id,
+            KOT.status.in_(["pending", "preparing"])
         )
     )
-    orders = result.scalars().all()
-    
-    # Normally we'd want to join the products to get their names.
-    # But since we use WatermelonDB, the frontend actually has the data and will map the product_id to a name.
-    # We will just return the raw orders. However, if we need to return KDSItem format with names, we can mock it or map it.
-    
-    # Since we are returning KDSOrderResponse we'd map it if we used joinedload, but wait, the KDSOrderResponse requires items.
-    # We need to map Order and its items, but Order items relation isn't explicitly defined in models yet or maybe it is.
-    # Let's check models.py for relationship.
-    # Actually, returning a flat list of orders might be better if the frontend relies on sync.
-    # We'll just return raw orders for now with empty items.
+    kots = result.scalars().all()
     
     response = []
-    for o in orders:
-        response.append({
-            "id": o.id,
-            "type": o.type,
-            "status": o.status,
-            "items": [] # Mocked for now since relationship might not exist
-        })
+    for kot in kots:
+        # Get order
+        order_res = await db.execute(select(Order).where(Order.id == kot.order_id))
+        order = order_res.scalars().first()
+        
+        # Get items
+        items_res = await db.execute(
+            select(OrderItem, Product)
+            .join(Product, OrderItem.product_id == Product.id)
+            .where(OrderItem.order_id == kot.order_id)
+        )
+        items = items_res.all()
+        
+        kds_items = []
+        for item, product in items:
+            # Optionally check if product.print_to_kitchen is True
+            if product.print_to_kitchen:
+                kds_items.append({
+                    "product_id": item.product_id,
+                    "quantity": item.quantity,
+                    "name": product.name
+                })
+        
+        # If no items need to be printed to kitchen, we might skip this KOT, but let's just include it for now if we created it.
+        # Wait, if all items are print_to_kitchen=False, KDS shouldn't show empty.
+        # But we'll rely on the KOT being generated in billing.
+        # Actually let's include all items if we don't have strict print_to_kitchen check, or keep the check.
+        # We'll just append it.
+        if not kds_items:
+            for item, product in items:
+                kds_items.append({
+                    "product_id": item.product_id,
+                    "quantity": item.quantity,
+                    "name": product.name
+                })
+
+        if order:
+            response.append({
+                "id": kot.id,
+                "type": order.type,
+                "status": kot.status,
+                "items": kds_items
+            })
+            
     return response
 
-@router.put("/kds/orders/{order_id}/status")
-async def update_kds_order_status(order_id: str, data: KDSOrderStatusUpdate, request: Request, db=Depends(get_db_session)):
+@router.put("/kds/orders/{kot_id}/status")
+async def update_kds_order_status(kot_id: str, data: KDSOrderStatusUpdate, request: Request, db=Depends(get_db_session)):
     tenant_id = request.state.tenant_id if hasattr(request.state, 'tenant_id') else "00000000-0000-0000-0000-000000000000"
     
-    result = await db.execute(select(Order).where(Order.id == order_id).where(Order.tenant_id == tenant_id))
-    order = result.scalars().first()
+    result = await db.execute(select(KOT).where(KOT.id == kot_id).where(KOT.tenant_id == tenant_id))
+    kot = result.scalars().first()
     
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+    if not kot:
+        raise HTTPException(status_code=404, detail="KOT not found")
         
-    order.status = data.status
+    kot.status = data.status
     await db.commit()
-    await db.refresh(order)
+    await db.refresh(kot)
     
-    return {"id": order.id, "status": order.status}
+    return {"id": kot.id, "status": kot.status}

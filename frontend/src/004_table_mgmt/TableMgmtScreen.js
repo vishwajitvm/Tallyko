@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Alert , Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Alert, Platform, Modal, TextInput } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../001_auth_tenant/AuthContext';
 import axios from 'axios';
@@ -14,6 +14,11 @@ export default function TableMgmtScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newTableNumber, setNewTableNumber] = useState('');
+  const [newTableCapacity, setNewTableCapacity] = useState('4');
+  const [isAddingTable, setIsAddingTable] = useState(false);
+
   const fetchTables = async () => {
     try {
       const response = await axios.get(`${API_URL}/tables`, {
@@ -22,12 +27,8 @@ export default function TableMgmtScreen() {
       setTables(response.data);
     } catch (error) {
       console.error("Failed to fetch tables", error);
-      // Fallback data if endpoint is not fully implemented yet
-      setTables([
-        { id: '1', name: 'Table 1', capacity: 4, is_active: true },
-        { id: '2', name: 'Table 2', capacity: 2, is_active: true },
-        { id: '3', name: 'Table 3', capacity: 6, is_active: true },
-      ]);
+      Alert.alert("Error", "Could not load tables from server.");
+      setTables([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -43,10 +44,37 @@ export default function TableMgmtScreen() {
     fetchTables();
   };
 
+  const handleAddTable = async () => {
+    if (!newTableNumber || !newTableCapacity) {
+      Alert.alert("Validation Error", "Table Number and Capacity are required.");
+      return;
+    }
+    
+    setIsAddingTable(true);
+    try {
+      const response = await axios.post(`${API_URL}/tables`, {
+        table_number: newTableNumber,
+        capacity: parseInt(newTableCapacity, 10),
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setTables([...tables, response.data]);
+      setModalVisible(false);
+      setNewTableNumber('');
+      setNewTableCapacity('4');
+    } catch (error) {
+      console.error("Add table error", error);
+      Alert.alert("Error", "Could not add table.");
+    } finally {
+      setIsAddingTable(false);
+    }
+  };
+
   const renderTable = ({ item }) => (
     <View style={[styles.tableCard, { backgroundColor: colors.surface, borderColor: colors.secondary + '30' }]}>
       <View style={styles.tableInfo}>
-        <Text style={[styles.tableName, { color: colors.text }]}>{item.name}</Text>
+        <Text style={[styles.tableName, { color: colors.text }]}>{item.table_number}</Text>
         <Text style={[styles.tableCapacity, { color: colors.secondary }]}>Capacity: {item.capacity}</Text>
       </View>
       <View style={styles.statusContainer}>
@@ -63,7 +91,7 @@ export default function TableMgmtScreen() {
         <Text style={[styles.title, { color: colors.text }]}>Tables</Text>
         <TouchableOpacity 
           style={[styles.addButton, { backgroundColor: colors.primary }]}
-          onPress={() => Alert.alert("Coming Soon", "Add Table screen is in development.")}
+          onPress={() => setModalVisible(true)}
         >
           <Text style={styles.addButtonText}>+ Add Table</Text>
         </TouchableOpacity>
@@ -89,14 +117,64 @@ export default function TableMgmtScreen() {
           }
         />
       )}
+
+      {/* Add Table Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>New Table</Text>
+            
+            <TextInput
+              style={[styles.input, { color: colors.text, borderColor: colors.secondary + '50' }]}
+              placeholder="Table Number / Name"
+              placeholderTextColor={colors.secondary}
+              value={newTableNumber}
+              onChangeText={setNewTableNumber}
+            />
+            
+            <TextInput
+              style={[styles.input, { color: colors.text, borderColor: colors.secondary + '50' }]}
+              placeholder="Capacity (e.g. 4)"
+              placeholderTextColor={colors.secondary}
+              keyboardType="numeric"
+              value={newTableCapacity}
+              onChangeText={setNewTableCapacity}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.secondary + '30' }]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={{ color: colors.text, fontWeight: 'bold' }}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleAddTable}
+                disabled={isAddingTable}
+              >
+                {isAddingTable ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Save Table</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -104,31 +182,16 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 40,
   },
-  title: { 
-    fontSize: 28, 
-    fontWeight: '800' 
-  },
+  title: { fontSize: 28, fontWeight: '800' },
   addButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
   },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-  },
-  listContainer: {
-    paddingHorizontal: 10,
-    paddingBottom: 20,
-  },
+  addButtonText: { color: '#fff', fontWeight: 'bold' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { fontSize: 16 },
+  listContainer: { paddingHorizontal: 10, paddingBottom: 20 },
   tableCard: {
     flex: 1,
     margin: 10,
@@ -142,23 +205,44 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 2,
   },
-  tableInfo: {
-    alignItems: 'center',
-    marginBottom: 10,
+  tableInfo: { alignItems: 'center', marginBottom: 10 },
+  tableName: { fontSize: 20, fontWeight: '700', marginBottom: 4 },
+  tableCapacity: { fontSize: 14 },
+  statusContainer: { marginTop: 5 },
+  tableStatus: { fontSize: 12, fontWeight: 'bold' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
   },
-  tableName: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 4,
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    minHeight: 300,
   },
-  tableCapacity: {
-    fontSize: 14,
-  },
-  statusContainer: {
-    marginTop: 5,
-  },
-  tableStatus: {
-    fontSize: 12,
+  modalTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
+    marginBottom: 20,
   },
+  input: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginHorizontal: 8,
+  }
 });

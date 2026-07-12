@@ -8,7 +8,7 @@ class OrderItemCreate(BaseModel):
     price: float
 
 class OrderCreate(BaseModel):
-    location_id: UUID
+    location_id: UUID | None = None
     order_type: str
     items: List[OrderItemCreate]
 
