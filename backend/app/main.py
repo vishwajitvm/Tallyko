@@ -36,14 +36,14 @@ file_handler = logging.FileHandler("/app/TraceNestLogs/app.log")
 file_handler.setFormatter(TraceNestJSONFormatter())
 logging.getLogger().addHandler(file_handler)
 
+from fastapi.exceptions import RequestValidationError
+
 class TracingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         trace_id = request.headers.get("X-Trace-ID", str(uuid.uuid4()))
         request.state.trace_id = trace_id
         
-        # In a real app, extract tenant/user from JWT header if exists
         tenant_id = request.headers.get("X-Tenant-ID", "unknown")
-        
         start_time = time.time()
         logger.info(
             f"Request started: {request.method} {request.url.path}",
@@ -62,7 +62,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
         except Exception as exc:
             process_time = time.time() - start_time
             logger.error(
-                f"Request failed: {request.method} {request.url.path} - Error: {str(exc)}",
+                f"Unhandled Exception: {request.method} {request.url.path} - Error: {str(exc)}",
                 exc_info=True,
                 extra={"trace_id": trace_id, "tenant_id": tenant_id, "duration": process_time}
             )
@@ -73,12 +73,27 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
 from app.api import auth, catalog, billing, analytics, kitchen, inventory, tables, online_store, crm, ai, sync, qr_menu
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import HTTPException
 
 app = FastAPI(
     title="Tallyko POS Backend",
-    version="0.1.0",
+    version="1.0.0",
     description="Multi-tenant POS backend for Tallyko"
 )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"success": False, "error": {"code": "HTTP_ERROR", "message": exc.detail}}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"success": False, "error": {"code": "VALIDATION_ERROR", "message": exc.errors()}}
+    )
 
 app.add_middleware(
     CORSMiddleware,

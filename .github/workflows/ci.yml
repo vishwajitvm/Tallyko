@@ -1,0 +1,54 @@
+name: Tallyko CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+        pip install pytest pytest-asyncio httpx pip-audit
+
+    - name: Security Scan (pip-audit)
+      run: |
+        pip-audit -r backend/requirements.txt
+        
+    - name: Run Pytest
+      run: |
+        export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
+        cd backend
+        pytest tests/
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install Dependencies
+      run: |
+        cd frontend
+        npm ci --legacy-peer-deps
+        
+    - name: Security Audit (npm audit)
+      run: |
+        cd frontend
+        npm audit || true # Using true to not fail CI immediately on moderate findings

@@ -4,12 +4,13 @@ from fastapi import HTTPException, status
 from app.models.models import GlobalVendor, GlobalUser, TenantConfig, TenantUser, Location
 from app.schemas.auth import VendorSignupRequest, LoginRequest, TokenResponse
 from app.core.security import get_password_hash, verify_password, create_access_token, create_refresh_token
-from app.core.tenant import SharedSessionLocal
+from app.core.tenant import get_shared_session_maker
 
 from sqlalchemy.exc import IntegrityError
 
 async def register_vendor(signup_data: VendorSignupRequest):
-    async with SharedSessionLocal() as session:
+    maker = get_shared_session_maker()
+    async with maker() as session:
         try:
             # Check if user already exists globally
             existing_user = await session.execute(
@@ -74,7 +75,8 @@ async def register_vendor(signup_data: VendorSignupRequest):
             raise e
 
 async def authenticate_user(login_data: LoginRequest) -> TokenResponse:
-    async with SharedSessionLocal() as session:
+    maker = get_shared_session_maker()
+    async with maker() as session:
         # Check Global User (could also check TenantUser depending on routing strategy)
         result = await session.execute(
             select(GlobalUser).where(GlobalUser.email == login_data.email)
@@ -125,7 +127,8 @@ async def refresh_token(refresh_data: RefreshRequest) -> TokenResponse:
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-    async with SharedSessionLocal() as session:
+    maker = get_shared_session_maker()
+    async with maker() as session:
         # Fetch the user and tenant logic similar to login
         user_result = await session.execute(select(GlobalUser).where(GlobalUser.id == user_id))
         user = user_result.scalars().first()
@@ -157,7 +160,8 @@ async def refresh_token(refresh_data: RefreshRequest) -> TokenResponse:
         )
 
 async def invite_user(invite_data: InviteRequest, tenant_id: str):
-    async with SharedSessionLocal() as session:
+    maker = get_shared_session_maker()
+    async with maker() as session:
         # Check if they are already in the system globally
         existing_user = await session.execute(
             select(GlobalUser).where(GlobalUser.email == invite_data.email)

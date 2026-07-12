@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
-from sqlalchemy.future import select
-from app.core.tenant import get_db_session
-from app.models.models import GlobalVendor, GlobalUser
+from app.core.rate_limit import rate_limit
 from app.schemas.auth import VendorSignupRequest, LoginRequest, TokenResponse, RefreshRequest, InviteRequest
 from app.services.auth_service import register_vendor, authenticate_user, refresh_token, invite_user
 import logging
@@ -11,15 +9,11 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/register")
 async def register(request: Request, data: VendorSignupRequest):
+    await rate_limit(request, requests=5, window=60)
     logger.info(f"[Auth] Attempting signup for vendor: {data.vendor_name}")
     try:
         result = await register_vendor(data)
         logger.info(f"[Auth] Signup successful for vendor: {data.vendor_name}")
-        # result is a dict with message and vendor_id from the service. The router expects TokenResponse for now.
-        # Wait, the original code had `return result`. The schema for signup was TokenResponse which was maybe wrong,
-        # but let's just return a dummy token for signup for now or the actual result.
-        # Actually the service returns {"message": ..., "vendor_id": ...}
-        # Let's mock a token if it's strictly enforced by response_model, but originally it just returned result.
         # I'll return what the service returns but bypass response_model.
         return result
     except Exception as e:
@@ -28,6 +22,7 @@ async def register(request: Request, data: VendorSignupRequest):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(request: Request, data: LoginRequest):
+    await rate_limit(request, requests=10, window=60)
     logger.info(f"[Auth] Attempting login for user: {data.email}")
     try:
         result = await authenticate_user(data)
@@ -39,6 +34,7 @@ async def login(request: Request, data: LoginRequest):
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(request: Request, data: RefreshRequest):
+    await rate_limit(request, requests=5, window=60)
     logger.info("[Auth] Attempting token refresh")
     try:
         return await refresh_token(data)
