@@ -19,7 +19,9 @@ export default function LoginScreen({ navigation }) {
     const result = await login(email, password);
     setLoading(false);
     if (!result.success) {
-      Alert.alert("Login Failed", result.error || "An unexpected error occurred.");
+      Alert.alert("Login Failed", result.message || "An unexpected error occurred.");
+    } else {
+      Alert.alert("Success", "Logged in successfully!");
     }
   };
 

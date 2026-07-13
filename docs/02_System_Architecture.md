@@ -40,39 +40,43 @@ Heavy tasks are offloaded to asynchronous workers (Celery/ARQ) via Redis.
 ## 3. Global Architecture Diagram
 
 ```mermaid
-architecture-beta
-    group client(Client Devices)
-    service app(Mobile POS / KDS) in client
-    service web(Web Dashboard) in client
+flowchart TD
+    subgraph Client [Client Devices]
+        app[Mobile POS / KDS]
+        web[Web Dashboard]
+    end
     
-    group edge(Edge & Gateway)
-    service proxy(Reverse Proxy\nTraefik) in edge
+    subgraph Edge [Edge & Gateway]
+        proxy[Reverse Proxy<br>Traefik]
+    end
     
-    group backend(Backend Tier)
-    service api(FastAPI API\nStateless) in backend
-    service worker(Background\nWorkers) in backend
+    subgraph Backend [Backend Tier]
+        api[FastAPI API<br>Stateless]
+        worker[Background<br>Workers]
+    end
     
-    group data(Data Tier)
-    service pg_main(PostgreSQL\nShared/Global) in data
-    service pg_ded(PostgreSQL\nDedicated Tenant) in data
-    service redis(Redis\nCache/Queue) in data
-    service minio(MinIO\nObject Storage) in data
+    subgraph Data [Data Tier]
+        pg_main[(PostgreSQL<br>Shared/Global)]
+        pg_ded[(PostgreSQL<br>Dedicated Tenant)]
+        redis[(Redis<br>Cache/Queue)]
+        minio[(MinIO<br>Object Storage)]
+    end
 
-    app:R --> L:proxy
-    web:R --> L:proxy
+    app --> proxy
+    web --> proxy
     
-    proxy:B --> T:api
+    proxy --> api
     
-    api:B --> T:pg_main
-    api:B --> T:pg_ded
-    api:B --> T:redis
-    api:B --> T:minio
-    api:R --> L:worker
+    api --> pg_main
+    api -.-> pg_ded
+    api --> redis
+    api --> minio
+    api --> worker
     
-    worker:B --> T:redis
-    worker:B --> T:pg_main
+    worker --> redis
+    worker --> pg_main
 ```
-*(Note: Mermaid architecture-beta is used here for a clean topological view. If your viewer does not support it, a standard flowchart represents the same).*
+*(Note: Diagram converted to standard flowchart for broad rendering compatibility).*
 
 ## 4. Scalability & Reliability Highlights
 *   **Stateless APIs:** FastAPI containers can be scaled horizontally behind the proxy during peak restaurant hours.

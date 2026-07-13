@@ -76,9 +76,9 @@ const MainTabs = () => {
 // We wrap the actual navigation in a component so it can consume useTheme hook
 const AppNavigator = () => {
   const { colors } = useTheme();
-  const { user, loading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -95,7 +95,7 @@ const AppNavigator = () => {
           headerTitleStyle: { fontWeight: 'bold' },
         }}
       >
-        {user ? (
+        {isAuthenticated ? (
           <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
         ) : (
           <>

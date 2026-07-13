@@ -63,24 +63,36 @@ Tallyko is a drop-in replacement tailored equally for:
 
 ---
 ```mermaid
-mindmap
-  root((Tallyko))
-    Core POS
-      Restaurant
-        KOT / KDS
-        Table Management
-        QR Menus
-      Retail
-        Barcode Billing
-        Stock Variants
-    Platform Differentiation
-      True Multi-Vendor
-      Dedicated DB Option
-      Reliability Engineered
-      Offline-First
-    Shared Modules
-      Inventory
-      CRM
-      Analytics
-      AI Tools
+flowchart TD
+    root((Tallyko))
+    
+    subgraph POS [Core POS]
+        rest[Restaurant]
+        ret[Retail]
+    end
+    
+    rest --> kot[KOT / KDS]
+    rest --> tab[Table Management]
+    rest --> qr[QR Menus]
+    
+    ret --> bar[Barcode Billing]
+    ret --> var[Stock Variants]
+    
+    subgraph Diff [Platform Differentiation]
+        mv[True Multi-Vendor]
+        db[Dedicated DB Option]
+        rel[Reliability Engineered]
+        off[Offline-First]
+    end
+    
+    subgraph Mod [Shared Modules]
+        inv[Inventory]
+        crm[CRM]
+        ana[Analytics]
+        ai[AI Tools]
+    end
+    
+    root --> POS
+    root --> Diff
+    root --> Mod
 ```

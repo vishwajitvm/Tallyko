@@ -5,7 +5,7 @@ import { useAuth } from './AuthContext';
 
 export default function SignupScreen({ navigation }) {
   const { colors } = useTheme();
-  const { signup } = useAuth();
+  const { register } = useAuth();
   
   const [vendorName, setVendorName] = useState('');
   const [phone, setPhone] = useState('');
@@ -19,10 +19,12 @@ export default function SignupScreen({ navigation }) {
       return;
     }
     setLoading(true);
-    const result = await signup(email, password, vendorName, phone);
+    const result = await register(vendorName, email, password, phone);
     setLoading(false);
     if (!result.success) {
-      Alert.alert("Signup Failed", result.error || "An unexpected error occurred.");
+      Alert.alert("Signup Failed", result.message || "An unexpected error occurred.");
+    } else {
+      Alert.alert("Success", "Account created successfully!");
     }
   };
 

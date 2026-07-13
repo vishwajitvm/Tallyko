@@ -6,6 +6,30 @@ import axios from 'axios';
 
 const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8000/api/v1' : 'http://127.0.0.1:8000/api/v1';
 
+const setStorageItem = async (key, value) => {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(key, value);
+  } else {
+    await SecureStore.setItemAsync(key, value);
+  }
+};
+
+const getStorageItem = async (key) => {
+  if (Platform.OS === 'web') {
+    return await AsyncStorage.getItem(key);
+  } else {
+    return await SecureStore.getItemAsync(key);
+  }
+};
+
+const removeStorageItem = async (key) => {
+  if (Platform.OS === 'web') {
+    return await AsyncStorage.removeItem(key);
+  } else {
+    return await SecureStore.deleteItemAsync(key);
+  }
+};
+
 export const AuthContext = createContext({
   isAuthenticated: false,
   token: null,
@@ -26,11 +50,10 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const bootstrapAsync = async () => {
       try {
-        const storedToken = await SecureStore.getItemAsync('@tallyko_token');
+        const storedToken = await getStorageItem('tallyko_token');
         if (storedToken) {
           setToken(storedToken);
           setIsAuthenticated(true);
-          // TODO: optionally fetch user info
         }
       } catch (e) {
         console.log('Restoring token failed');
@@ -46,7 +69,7 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post(`${API_URL}/auth/login`, { email, password });
       const data = response.data;
       if (data && data.access_token) {
-        await SecureStore.setItemAsync('@tallyko_token', data.access_token);
+        await setStorageItem('tallyko_token', data.access_token);
         setToken(data.access_token);
         setIsAuthenticated(true);
         return { success: true };
@@ -60,16 +83,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (vendorName, email, password) => {
+  const register = async (vendorName, email, password, phone) => {
     try {
       const response = await axios.post(`${API_URL}/auth/register`, { 
         vendor_name: vendorName,
         email, 
-        password 
+        password,
+        phone
       });
       const data = response.data;
       if (data && data.access_token) {
-        await SecureStore.setItemAsync('@tallyko_token', data.access_token);
+        await setStorageItem('tallyko_token', data.access_token);
         setToken(data.access_token);
         setIsAuthenticated(true);
         return { success: true };
@@ -84,7 +108,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await SecureStore.deleteItemAsync('@tallyko_token');
+    await removeStorageItem('tallyko_token');
     setToken(null);
     setIsAuthenticated(false);
     setTenant(null);

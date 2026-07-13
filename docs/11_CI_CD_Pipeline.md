@@ -38,7 +38,7 @@ To prevent system-wide outages from a bad update:
 
 ```mermaid
 flowchart TD
-    Developer[Developer Push to `main`]
+    Developer[Developer Push to main]
     
     subgraph CI [Continuous Integration]
         Lint[Lint & Code Quality]

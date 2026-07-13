@@ -52,35 +52,37 @@ When an enterprise vendor requests a **Dedicated Database**, the deployment proc
 ## 5. Deployment Architecture Diagram
 
 ```mermaid
-architecture-beta
-    group vps(VPS / Bare Metal Server)
-    
-    group dockernet(Docker Network) in vps
-    
-    service traefik(Traefik\nPorts 80/443) in dockernet
-    
-    group appgroup(App Services) in dockernet
-    service api1(FastAPI 1) in appgroup
-    service api2(FastAPI 2) in appgroup
-    service worker(Celery Worker) in appgroup
-    
-    group datagroup(Data Services) in dockernet
-    service pg(PostgreSQL) in datagroup
-    service redis(Redis) in datagroup
-    service minio(MinIO) in datagroup
-    
-    traefik:B --> T:api1
-    traefik:B --> T:api2
-    
-    api1:R --> L:pg
-    api2:R --> L:pg
-    worker:R --> L:pg
-    
-    api1:R --> L:redis
-    api2:R --> L:redis
-    worker:R --> L:redis
-    
-    api1:R --> L:minio
-    api2:R --> L:minio
-    worker:R --> L:minio
+flowchart TD
+    subgraph VPS [VPS / Bare Metal Server]
+        subgraph DockerNet [Docker Network]
+            traefik[Traefik<br>Ports 80/443]
+            
+            subgraph AppGroup [App Services]
+                api1[FastAPI 1]
+                api2[FastAPI 2]
+                worker[Celery Worker]
+            end
+            
+            subgraph DataGroup [Data Services]
+                pg[(PostgreSQL)]
+                redis[(Redis)]
+                minio[(MinIO)]
+            end
+            
+            traefik --> api1
+            traefik --> api2
+            
+            api1 --> pg
+            api2 --> pg
+            worker --> pg
+            
+            api1 --> redis
+            api2 --> redis
+            worker --> redis
+            
+            api1 --> minio
+            api2 --> minio
+            worker --> minio
+        end
+    end
 ```
