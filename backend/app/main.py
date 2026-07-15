@@ -88,11 +88,13 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         content={"success": False, "error": {"code": "HTTP_ERROR", "message": exc.detail}}
     )
 
+from fastapi.encoders import jsonable_encoder
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"success": False, "error": {"code": "VALIDATION_ERROR", "message": exc.errors()}}
+        content={"success": False, "error": {"code": "VALIDATION_ERROR", "message": jsonable_encoder(exc.errors())}}
     )
 
 app.add_middleware(
