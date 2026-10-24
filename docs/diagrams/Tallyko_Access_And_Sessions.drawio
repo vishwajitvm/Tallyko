@@ -1,0 +1,484 @@
+<mxfile host="Electron" modified="2026-10-25T00:00:00.000Z" agent="Tallyko docs (hand-laid, uncompressed)" version="24.7.17" type="device" pages="3">
+  <diagram id="tallyko-access-and-sessions-access-model" name="Access model">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="860" math="0" shadow="0" background="#ffffff">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;b&gt;Tallyko · Access and sessions · access model&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;What a signed-in staff member may do: plan modules × overrides × owner-hidden modules × role permissions&lt;/font&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=none;fontColor=#ffffff;fontSize=18;align=left;spacingLeft=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1490" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="title_meta" value="&lt;b&gt;v2.0.0&lt;/b&gt;&lt;br&gt;2026-10-25" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0f766e;fontColor=#0f766e;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="20" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="in" value="Inputs" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#e1d5e7;swimlaneFillColor=#f9f6fb;strokeColor=#9673a6;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="100" width="520" height="600" as="geometry" />
+        </mxCell>
+        <mxCell id="i1" value="&lt;b&gt;plans.features&lt;/b&gt; · modules in the business's plan (catalog.FEATURES, DEFAULT_PLANS)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="in">
+          <mxGeometry x="20" y="40" width="480" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="i2" value="&lt;b&gt;tenant_configs.feature_overrides&lt;/b&gt; · super admin adds or removes modules for one business" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="in">
+          <mxGeometry x="20" y="125" width="480" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="i3" value="&lt;b&gt;business_settings.disabled_modules&lt;/b&gt; · modules the owner chose to hide" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="in">
+          <mxGeometry x="20" y="210" width="480" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="i4" value="&lt;b&gt;roles.permissions&lt;/b&gt; · the staff member's role: owner, manager, cashier, waiter, kitchen or a custom role" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="in">
+          <mxGeometry x="20" y="330" width="480" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="i5" value="&lt;b&gt;PERMISSION_FEATURE&lt;/b&gt; · each permission belongs to a module (catalog.py)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="in">
+          <mxGeometry x="20" y="415" width="480" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="i6" value="&lt;b&gt;plans.limits&lt;/b&gt; + &lt;b&gt;tenant_configs.limit_overrides&lt;/b&gt; · max staff, products, locations" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="in">
+          <mxGeometry x="20" y="510" width="480" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="calc" value="services/access.py" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#d5e8d4;swimlaneFillColor=#f5faf4;strokeColor=#82b366;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="600" y="100" width="520" height="600" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" value="&lt;b&gt;Enabled modules&lt;/b&gt; = plan features ± overrides − owner-hidden&lt;br&gt;entitlements(tenant_id), cached 30 s per process" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="calc">
+          <mxGeometry x="20" y="120" width="480" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="m2" value="&lt;b&gt;Effective permissions&lt;/b&gt; = role permissions whose module is enabled&lt;br&gt;effective_permissions(role_perms, features) → Access" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="calc">
+          <mxGeometry x="20" y="370" width="480" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="m3" value="&lt;b&gt;Limits&lt;/b&gt; · check_limit() when adding staff, products or locations" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="calc">
+          <mxGeometry x="20" y="510" width="480" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="use" value="Where it is enforced" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#ffe6cc;swimlaneFillColor=#fff9f2;strokeColor=#d79b00;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="100" width="500" height="600" as="geometry" />
+        </mxCell>
+        <mxCell id="u1" value="&lt;b&gt;require(&quot;perm.code&quot;, feature=&quot;module&quot;)&lt;/b&gt; on every business route → 403 when missing" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="use">
+          <mxGeometry x="20" y="40" width="460" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="u2" value="access.can(permission) / access.has(module) for finer checks inside a route" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="use">
+          <mxGeometry x="20" y="140" width="460" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="u3" value="&lt;b&gt;GET /access/me&lt;/b&gt; → the app hides nav items and buttons (navItems filtered by role and business type)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="use">
+          <mxGeometry x="20" y="230" width="460" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="u4" value="Token kinds: platform tokens (super_admin, support) get 403 on business routes; business tokens get 403 on /platform. The owner role holds every permission of the enabled modules." style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffffff;strokeColor=#9e9e9e;fontSize=10;spacing=6;" vertex="1" parent="use">
+          <mxGeometry x="20" y="330" width="460" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="u5" value="Changes apply at once: invalidate(tenant_id) after role, module or plan changes; a staff member whose access changed is signed out (sessions.revoke)." style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffffff;strokeColor=#9e9e9e;fontSize=10;spacing=6;" vertex="1" parent="use">
+          <mxGeometry x="20" y="460" width="460" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="e_i1_m1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;" edge="1" parent="1" source="i1" target="m1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_i2_m1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="i2" target="m1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_i3_m1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.8;entryDx=0;entryDy=0;" edge="1" parent="1" source="i3" target="m1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_i4_m2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="i4" target="m2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_i5_m2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="i5" target="m2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_i6_m3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="i6" target="m3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_m1_m2" value="modules" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="m1" target="m2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_m2_u1" value="Access" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="m2" target="u1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1150" y="515" />
+              <mxPoint x="1150" y="180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend" value="Legend" style="swimlane;rounded=1;arcSize=4;html=1;startSize=24;collapsible=0;fillColor=#f3f4f6;swimlaneFillColor=#ffffff;strokeColor=#9ca3af;fontStyle=1;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="730" width="1070" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw0" value="" style="rounded=1;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="legend">
+          <mxGeometry x="12" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx0" value="Stored settings" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="40" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw1" value="" style="rounded=1;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="legend">
+          <mxGeometry x="187" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx1" value="Computed per request" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="215" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw2" value="" style="rounded=1;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="legend">
+          <mxGeometry x="362" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx2" value="Enforcement" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="390" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw3" value="" style="rounded=1;html=1;fillColor=#ffffff;strokeColor=#9e9e9e;" vertex="1" parent="legend">
+          <mxGeometry x="537" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx3" value="Rules" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="565" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed4" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="712" y="40" as="sourcePoint" />
+            <mxPoint x="740" y="40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx4" value="request / call" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="746" y="29" width="135" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed5" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;dashed=1;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="887" y="40" as="sourcePoint" />
+            <mxPoint x="915" y="40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx5" value="async, logical or optional" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="921" y="29" width="135" height="22" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="tallyko-access-and-sessions-request-pipeline" name="Request pipeline">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1130" math="0" shadow="0" background="#ffffff">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;b&gt;Tallyko · Access and sessions · request pipeline&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;Every authenticated business request passes these checks before a router runs (core/security.py, core/tenant.py)&lt;/font&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=none;fontColor=#ffffff;fontSize=18;align=left;spacingLeft=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1490" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="title_meta" value="&lt;b&gt;v2.0.0&lt;/b&gt;&lt;br&gt;2026-10-25" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0f766e;fontColor=#0f766e;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="20" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="q0" value="Request · Authorization: Bearer &amp;lt;access token, 12 h&amp;gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="110" width="420" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="q1" value="Caddy → backend · rate limits in Redis (per account / per phone; high per-IP ceilings: a shop shares one IP)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="200" width="420" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="q1_x" value="429 · too many requests" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="760" y="207" width="300" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q1_x" value="over" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q1" target="q1_x">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="q2" value="Decode JWT: signature, type “access”, not expired" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="290" width="420" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="q2_x" value="401 · session expired" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="760" y="297" width="300" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q2_x" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q2" target="q2_x">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="q3" value="Business token? (tokens with platform_role are refused here)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="380" width="420" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="q3_x" value="403 · platform accounts can't use business screens" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="760" y="387" width="300" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q3_x" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q3" target="q3_x">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="q4" value="Tenant config from the Redis cache: status, paid_until, session_version" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="470" width="420" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="q4_x" value="401 · business not found" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="760" y="477" width="300" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q4_x" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q4" target="q4_x">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="q5" value="Token sv = tenant_configs.session_version and sid not in the Redis revoked set" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="560" width="420" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="q5_x" value="401 · signed out of this device" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="760" y="567" width="300" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q5_x" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q5" target="q5_x">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="q6" value="Locked? paid_until + grace_days passed (skipped on renewal, profile, logout and account deletion: get_current_user_allow_lapsed)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="650" width="420" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="q6_x" value="402 · subscription ended, renew to continue" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="760" y="657" width="300" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q6_x" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q6" target="q6_x">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="q7" value="require(permission, module) → Access" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="740" width="420" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="q7_x" value="403 · not allowed for this role / plan" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="760" y="747" width="300" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q7_x" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q7" target="q7_x">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="q8" value="get_tenant_db: business active? SET LOCAL ROLE tallyko_app · set_config('app.current_tenant_id')" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="830" width="420" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="q8_x" value="403 · business suspended" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="760" y="837" width="300" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q8_x" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q8" target="q8_x">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="q9" value="Router → service → PostgreSQL · RLS filters every query to this business" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ccfbf1;strokeColor=#0f766e;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="920" width="420" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="pc_q0_q1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="q0" target="q1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pc_q1_q2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="q1" target="q2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pc_q2_q3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="q2" target="q3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pc_q3_q4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="q3" target="q4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pc_q4_q5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="q4" target="q5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pc_q5_q6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="q5" target="q6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pc_q6_q7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="q6" target="q7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pc_q7_q8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="q7" target="q8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pc_q8_q9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="q8" target="q9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="plat" value="&lt;b&gt;Platform routes&lt;/b&gt; (/platform, super admin console)&lt;br&gt;get_platform_user: platform_role super_admin or support, sid not revoked, account re-read on every request · require_super_admin for changes · system sessions (no RLS)." style="shape=note;whiteSpace=wrap;html=1;size=14;fillColor=#fffbe6;strokeColor=#c9b458;fontSize=10;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="20" y="110" width="230" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="react" value="What the app does" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#dae8fc;swimlaneFillColor=#f4f8fd;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="260" width="560" height="700" as="geometry" />
+        </mxCell>
+        <mxCell id="r401" value="&lt;b&gt;401&lt;/b&gt; → one try at POST /auth/refresh (refresh token 30 d; the session must not be revoked), otherwise the sign-in screen. Outbox and cached data stay on the device." style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="react">
+          <mxGeometry x="20" y="60" width="520" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="r402" value="&lt;b&gt;402&lt;/b&gt; → renewal screen (/subscription); offline outbox paused and kept" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="react">
+          <mxGeometry x="20" y="380" width="520" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="r403" value="&lt;b&gt;403&lt;/b&gt; → message; the nav already hides what the role or plan can't use" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="react">
+          <mxGeometry x="20" y="470" width="520" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q2_r" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q2_x" target="r401">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q4_r" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q4_x" target="r401">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q5_r" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q5_x" target="r401">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q6_r" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q6_x" target="r402">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q7_r" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q7_x" target="r403">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_q8_r" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="q8_x" target="r403">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="Legend" style="swimlane;rounded=1;arcSize=4;html=1;startSize=24;collapsible=0;fillColor=#f3f4f6;swimlaneFillColor=#ffffff;strokeColor=#9ca3af;fontStyle=1;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="1020" width="1070" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw0" value="" style="rounded=1;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="legend">
+          <mxGeometry x="12" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx0" value="Check" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="40" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw1" value="" style="rounded=1;html=1;fillColor=#ccfbf1;strokeColor=#0f766e;" vertex="1" parent="legend">
+          <mxGeometry x="187" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx1" value="Allowed" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="215" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw2" value="" style="rounded=1;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="legend">
+          <mxGeometry x="362" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx2" value="Refused" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="390" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw3" value="" style="rounded=1;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="legend">
+          <mxGeometry x="537" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx3" value="App reaction" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="565" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed4" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="712" y="40" as="sourcePoint" />
+            <mxPoint x="740" y="40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx4" value="request / call" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="746" y="29" width="135" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed5" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;dashed=1;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="887" y="40" as="sourcePoint" />
+            <mxPoint x="915" y="40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx5" value="async, logical or optional" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="921" y="29" width="135" height="22" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="tallyko-access-and-sessions-sessions-and-sign-out" name="Sessions and sign-out">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="960" math="0" shadow="0" background="#ffffff">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;b&gt;Tallyko · Access and sessions · sessions and sign-out&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;Every login is a user_sessions row; tokens carry its id (sid) and the business session version (sv)&lt;/font&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=none;fontColor=#ffffff;fontSize=18;align=left;spacingLeft=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1490" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="title_meta" value="&lt;b&gt;v2.0.0&lt;/b&gt;&lt;br&gt;2026-10-25" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0f766e;fontColor=#0f766e;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="20" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" value="&lt;b&gt;POST /auth/login&lt;/b&gt; (or signup) · rate-limited per account" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="20" y="110" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" value="&lt;b&gt;user_sessions&lt;/b&gt; row: user, tenant, staff, device (from User-Agent), ip" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="354" y="110" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" value="Access token 12 h + refresh token 30 d · both carry sid, sv, staff_id" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="688" y="110" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" value="&lt;b&gt;POST /auth/refresh&lt;/b&gt;: check_refreshable (session not revoked) → new access token" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="1022" y="110" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" value="Settings → Account → Devices: GET /auth/sessions (device, last_seen_at)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="1356" y="110" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="lc_l1_l2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="l1" target="l2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lc_l2_l3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="l2" target="l3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lc_l3_l4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="l3" target="l4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lc_l4_l5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="l4" target="l5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="trig" value="Ways a device gets signed out" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#ffe6cc;swimlaneFillColor=#fff9f2;strokeColor=#d79b00;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="240" width="640" height="580" as="geometry" />
+        </mxCell>
+        <mxCell id="t1" value="This device signs out · POST /auth/logout" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="trig">
+          <mxGeometry x="20" y="40" width="600" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" value="Owner or staff ends another device · DELETE /auth/sessions/{id}" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="trig">
+          <mxGeometry x="20" y="116" width="600" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" value="Password changed · every other session of that login" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="trig">
+          <mxGeometry x="20" y="192" width="600" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t4" value="Owner or manager changes a staff member's access · that member's sessions" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="trig">
+          <mxGeometry x="20" y="268" width="600" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t5" value="Super admin revokes one session · POST /platform/sessions/{id}/revoke" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="trig">
+          <mxGeometry x="20" y="344" width="600" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t6" value="Super admin signs a business out · POST /platform/businesses/{id}/sign-out" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="trig">
+          <mxGeometry x="20" y="420" width="600" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t7" value="Daily 01:00 IST check · subscription + grace ended" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="trig">
+          <mxGeometry x="20" y="496" width="600" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="mech" value="Mechanisms (services/sessions.py)" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#e1d5e7;swimlaneFillColor=#f9f6fb;strokeColor=#9673a6;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="720" y="240" width="480" height="580" as="geometry" />
+        </mxCell>
+        <mxCell id="mx1" value="&lt;b&gt;Revoke sessions&lt;/b&gt; · revoke(): user_sessions.revoked_at + reason; the sid goes into the Redis revoked set, checked on every request (fails open if Redis is down)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="mech">
+          <mxGeometry x="20" y="60" width="440" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="mx2" value="&lt;b&gt;Bump the session version&lt;/b&gt; · sign_out_business(): tenant_configs.session_version + 1 and every session revoked; drop_tenant_cache · applies even without Redis" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="mech">
+          <mxGeometry x="20" y="360" width="440" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="res" value="Result" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#dae8fc;swimlaneFillColor=#f4f8fd;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="240" width="420" height="580" as="geometry" />
+        </mxCell>
+        <mxCell id="rr" value="Next request with an old token → &lt;b&gt;401&lt;/b&gt; “You were signed out of this device” → the app clears its tokens and shows sign-in; the outbox and cached data stay on the device" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="res">
+          <mxGeometry x="20" y="200" width="380" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="e_t1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t1" target="mx1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_t2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t2" target="mx1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_t3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t3" target="mx1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_t4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t4" target="mx1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_t5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t5" target="mx1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_t6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t6" target="mx2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_t7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t7" target="mx2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mx1_rr" value="sid revoked" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" parent="1" source="mx1" target="rr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mx2_rr" value="sv mismatch" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" parent="1" source="mx2" target="rr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="Legend" style="swimlane;rounded=1;arcSize=4;html=1;startSize=24;collapsible=0;fillColor=#f3f4f6;swimlaneFillColor=#ffffff;strokeColor=#9ca3af;fontStyle=1;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="850" width="895" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw0" value="" style="rounded=1;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="legend">
+          <mxGeometry x="12" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx0" value="Login and result" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="40" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw1" value="" style="rounded=1;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="legend">
+          <mxGeometry x="187" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx1" value="Triggers" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="215" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw2" value="" style="rounded=1;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="legend">
+          <mxGeometry x="362" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx2" value="Mechanisms" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="390" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed3" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="537" y="40" as="sourcePoint" />
+            <mxPoint x="565" y="40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx3" value="request / call" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="571" y="29" width="135" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed4" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;dashed=1;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="712" y="40" as="sourcePoint" />
+            <mxPoint x="740" y="40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx4" value="async, logical or optional" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="746" y="29" width="135" height="22" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

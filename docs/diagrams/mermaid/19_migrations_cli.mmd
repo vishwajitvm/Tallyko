@@ -1,0 +1,49 @@
+%% 19 · Migrations CLI (backend/manage.py)
+%% Which manage.py command to run, and when. Run inside the backend container:
+%% docker compose exec backend python manage.py <command>   (or scripts/db.sh / db.ps1)
+flowchart TB
+    start(["What do you need?"])
+
+    subgraph Schema["Schema change (one migration per table)"]
+        direction TB
+        edit["Edit the model in app/models/area.py<br/>new tenant table: TENANT_RLS or child_rls"]
+        make["make:migration 'msg' --table T<br/>(--empty for a hand-written one)"]
+        review["Review: backfill, server defaults,<br/>downgrade(), RLS block present"]
+        mig["migrate"]
+        rb["rollback  (--steps N / --to 0040)"]
+        mig2["migrate again, then run tests"]
+        edit --> make --> review --> mig --> rb --> mig2
+        sync["db:sync 'msg'<br/>dev shortcut: generate + apply"]
+        edit -.-> sync
+    end
+
+    subgraph Inspect["Check"]
+        direction TB
+        status["status<br/>applied and pending"]
+        check["db:check<br/>fails if models and migrations differ (CI)"]
+    end
+
+    subgraph Reset["Reset a dev database (refused in production)"]
+        direction TB
+        refresh["refresh [--seed]<br/>roll everything back, migrate again"]
+        fresh["fresh [--seed]<br/>drop every table, migrate from scratch"]
+    end
+
+    subgraph Data["Data and admins"]
+        direction TB
+        seed["seed [names] / --list<br/>platform_defaults (prod-safe) + demo seeders"]
+        sa["create:superadmin EMAIL<br/>works in production"]
+    end
+
+    subgraph Ops["Running services"]
+        direction TB
+        watch["watch<br/>dev container auto-applies new migration files"]
+        subs["subscriptions:check<br/>run the daily 01:00 IST check now"]
+        auto["Prod backend runs migrate on start"]
+    end
+
+    start --> Schema
+    start --> Inspect
+    start --> Reset
+    start --> Data
+    start --> Ops

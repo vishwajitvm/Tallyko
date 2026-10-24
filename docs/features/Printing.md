@@ -1,43 +1,25 @@
-# Bluetooth Printing Architecture
+# Receipt & Kitchen Printing
 
-## The Constraint
+## What works where
 
-Tallyko utilizes a React Native frontend built with Expo. During active development, we use **Expo Go** to preview the application on physical devices and simulators.
+| Device | Bluetooth Classic (most cheap 58/80 mm printers: PT-210, MTP-II, Rugtek…) | Bluetooth LE printers | USB / network printers |
+|---|---|---|---|
+| **Android app** (APK / Play) | ✅ pair in Android Bluetooth settings, then pick it in Tallyko | ✅ | via Android print dialog |
+| **iPhone / iPad app** | ❌ iOS blocks non-MFi Classic devices | ✅ | ✅ AirPrint |
+| **Chrome / Edge** (Windows, macOS, Android) | ❌ | ✅ Web Bluetooth (HTTPS) | ✅ print dialog — install the printer's driver, choose 58/80 mm paper |
+| **Safari (iPhone)** | ❌ | ❌ | ✅ AirPrint via print dialog |
+| **Expo Go** (dev only) | ❌ native modules not included | ❌ | print dialog |
 
-**Expo Go does not support native Bluetooth linking.** It is a sandboxed environment that only supports a curated list of native modules. Libraries like `react-native-bluetooth-classic` or `react-native-ble-plx` require custom native code, which means they fundamentally *cannot* work inside the standard Expo Go app.
+Recommendation for a shop: an Android tablet/phone with the Tallyko APK + any Bluetooth thermal printer is the cheapest reliable setup. On a laptop, a USB thermal printer with its driver + the browser print dialog works with every printer.
 
-## Current Implementation (Development Mode)
+## Using it
 
-For development purposes, the `PrinterService.js` contains a mock that simulates connecting to a printer and printing a receipt by using `setTimeout` and outputting the receipt layout to `console.log`. This allows the UI flow to be built and tested without physical hardware or native builds.
+Settings → Printers & receipts: *Find printers*, choose the bill printer (and optionally a separate kitchen printer), paper width 58/80 mm, auto-print bill after payment, auto-print KOT, barcode on bill, UPI QR on bill, open cash drawer, test print.
 
-## Production Implementation (Ejecting / Custom Dev Client)
+## How it's built
 
-To implement real Bluetooth printing in Production, you must leave the Expo Go sandbox. You have two options:
-
-### 1. Expo Prebuild (EAS Build / Dev Client) - **Recommended**
-
-Instead of ejecting completely, you can use Expo's Custom Dev Client approach. This allows you to retain Expo's managed workflow while injecting custom native code.
-
-**Steps:**
-1. Install the native library: `npx expo install react-native-ble-plx`
-2. Install expo dev client: `npx expo install expo-dev-client`
-3. Add the plugin to your `app.json` or `app.config.js`:
-   ```json
-   {
-     "expo": {
-       "plugins": ["react-native-ble-plx"]
-     }
-   }
-   ```
-4. Build the custom client using EAS: `eas build --profile development --platform android`
-5. Install the resulting APK on your Android device and run `npx expo start --dev-client`.
-
-### 2. Bare React Native App
-
-If you require full control over the Android/iOS directories:
-1. Run `npx expo prebuild`
-2. Follow standard React Native CLI linking instructions for your chosen Bluetooth thermal printer library.
-
-## Connecting to ESC/POS Thermal Printers
-
-Once native Bluetooth is enabled, the logic in `PrinterService.js` should be replaced with ESC/POS commands sent over the Bluetooth serial connection to the paired thermal printer.
+- `frontend/src/lib/print/escpos.ts` — ESC/POS command builder (text, alignment, bold/size, Code128 barcode `GS k`, native QR `GS ( k`, cut, drawer kick). `₹` and Hindi are transliterated for printers without those glyphs.
+- `frontend/src/lib/print/receipt.ts` — GST receipt and KOT layouts (32/48 columns), plain text, ESC/POS bytes and HTML (for the print dialog, with SVG barcode + UPI QR).
+- `frontend/src/lib/print/printers.ts` — one API for every transport: Bluetooth Classic (`react-native-bluetooth-classic`, Android), BLE (`react-native-ble-plx`, chunked writes ≤180 bytes, reconnect-and-resume), Web Bluetooth, and HTML printing (`expo-print` natively, hidden iframe on web — SDK 57's `printAsync` on web ignores the `html` option). Native modules load lazily, so Expo Go and browsers report "unavailable" instead of crashing. A single job queue prevents interleaved prints.
+- Permissions: Android `BLUETOOTH_SCAN` (`neverForLocation`) + `BLUETOOTH_CONNECT` requested at runtime; iOS `NSBluetoothAlwaysUsageDescription`.
+- Tests: `frontend/src/lib/print/__tests__/*` and `frontend/src/lib/barcode/__tests__/*` (byte sequences, column layout, barcodes) — `cd frontend && npx jest`.

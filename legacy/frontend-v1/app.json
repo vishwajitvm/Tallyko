@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Tallyko",
+    "slug": "tallyko-frontend",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

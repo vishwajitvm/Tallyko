@@ -1,0 +1,44 @@
+%% 01 · System context
+%% Who uses Tallyko, through which client, and which outside services the platform talks to.
+%% One Expo codebase ships every client. Not built: Traefik, Cloudflare, MinIO, Celery, a separate owner-dashboard SPA.
+flowchart LR
+    subgraph People["People"]
+        owner(["Owner / manager"])
+        staff(["Cashier / waiter"])
+        cook(["Kitchen staff"])
+        guest(["Shop customer"])
+        admin(["Tallyko super admin / support"])
+    end
+
+    subgraph Clients["Clients - one Expo app (web, Android, iOS)"]
+        pos["POS, tables, orders, menu,<br/>reports, settings, owner's watch"]
+        kds["Kitchen display<br/>(same app, kitchen role, polls 5 s)"]
+        console["Super admin console<br/>/admin routes"]
+        store["Public pages<br/>/store/{tenantId} and ?table={id}"]
+    end
+
+    printer[("Bluetooth / USB<br/>thermal printer")]
+
+    subgraph Platform["Tallyko server (Docker Compose)"]
+        api["Caddy + FastAPI<br/>/api/v1"]
+        data[("PostgreSQL + Redis")]
+    end
+
+    subgraph Outside["Outside services"]
+        smtp["SMTP provider<br/>(Mailpit in dev)"]
+        upi["Customer's UPI app<br/>(deep link, no gateway)"]
+        agg["Swiggy / Zomato / ONDC<br/>or a bridge (HMAC webhook)"]
+    end
+
+    owner --> pos
+    staff --> pos
+    cook --> kds
+    guest --> store
+    admin --> console
+
+    pos -- "ESC/POS, print dialog" --> printer
+    pos & kds & console & store -- "HTTPS JSON" --> api
+    api --> data
+    api -- "queued emails" --> smtp
+    store -. "upi://pay link" .-> upi
+    agg -- "signed order webhook" --> api

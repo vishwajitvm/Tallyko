@@ -1,119 +1,245 @@
-<mxfile host="Electron" modified="2023-10-27T00:00:00.000Z" agent="Mozilla/5.0" version="22.0.4" type="device">
-  <diagram id="arch-diagram" name="Tallyko System Architecture">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+<mxfile host="Electron" modified="2026-10-25T00:00:00.000Z" agent="Tallyko docs (hand-laid, uncompressed)" version="24.7.17" type="device" pages="1">
+  <diagram id="tallyko-system-architecture-system-architecture" name="System architecture">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1240" math="0" shadow="0" background="#ffffff">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        
-        <!-- Background Groups -->
-        <mxCell id="group_client" value="Client Devices" style="swimlane;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-          <mxGeometry x="40" y="40" width="180" height="400" as="geometry" />
+        <mxCell id="title" value="&lt;b&gt;Tallyko · System architecture&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;Production runtime: clients → Caddy → FastAPI → PostgreSQL (RLS) and Redis, with in-process background tasks&lt;/font&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=none;fontColor=#ffffff;fontSize=18;align=left;spacingLeft=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1490" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="group_edge" value="Edge Layer" style="swimlane;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-          <mxGeometry x="280" y="40" width="180" height="400" as="geometry" />
+        <mxCell id="title_meta" value="&lt;b&gt;v2.0.0&lt;/b&gt;&lt;br&gt;2026-10-25" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0f766e;fontColor=#0f766e;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="20" width="160" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="group_app" value="Application Tier" style="swimlane;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
-          <mxGeometry x="520" y="40" width="220" height="400" as="geometry" />
+        <mxCell id="g_clients" value="Clients · one Expo codebase (SDK 57 · React Native 0.86 · React 19 · TypeScript · expo-router · zustand)" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#dae8fc;swimlaneFillColor=#f4f8fd;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="100" width="1280" height="210" as="geometry" />
         </mxCell>
-        <mxCell id="group_data" value="Data &amp; Persistence Tier" style="swimlane;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
-          <mxGeometry x="800" y="40" width="220" height="500" as="geometry" />
+        <mxCell id="c_web" value="&lt;b&gt;Web / PWA&lt;/b&gt;&lt;br&gt;laptop or desktop browser&lt;br&gt;installable, sw.js app shell" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="g_clients">
+          <mxGeometry x="20" y="36" width="190" height="88" as="geometry" />
         </mxCell>
-
-        <!-- Clients -->
-        <mxCell id="pos_app" value="Mobile POS App&#10;(React Native)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="70" y="100" width="120" height="60" as="geometry" />
+        <mxCell id="c_android" value="&lt;b&gt;Android app&lt;/b&gt;&lt;br&gt;APK / AAB · Play Store&lt;br&gt;tablets and phones" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="g_clients">
+          <mxGeometry x="222" y="36" width="190" height="88" as="geometry" />
         </mxCell>
-        <mxCell id="web_dash" value="Web Dashboard&#10;(React JS)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="70" y="220" width="120" height="60" as="geometry" />
+        <mxCell id="c_ios" value="&lt;b&gt;iOS app&lt;/b&gt;&lt;br&gt;App Store, or home-screen&lt;br&gt;web app on iPhone / iPad" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="g_clients">
+          <mxGeometry x="424" y="36" width="190" height="88" as="geometry" />
         </mxCell>
-        <mxCell id="kds_app" value="KDS Screen&#10;(Android)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="70" y="340" width="120" height="60" as="geometry" />
+        <mxCell id="c_kds" value="&lt;b&gt;Kitchen display&lt;/b&gt;&lt;br&gt;same app, kitchen role&lt;br&gt;wall TV / tablet · polls every 5 s" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="g_clients">
+          <mxGeometry x="626" y="36" width="190" height="88" as="geometry" />
         </mxCell>
-
-        <!-- Edge -->
-        <mxCell id="waf" value="Cloudflare / WAF" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="310" y="100" width="120" height="60" as="geometry" />
+        <mxCell id="c_admin" value="&lt;b&gt;Super admin console&lt;/b&gt;&lt;br&gt;/admin routes&lt;br&gt;platform logins: super_admin, support" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="g_clients">
+          <mxGeometry x="828" y="36" width="190" height="88" as="geometry" />
         </mxCell>
-        <mxCell id="traefik" value="Traefik Proxy&#10;SSL &amp; Load Balancer" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="310" y="220" width="120" height="80" as="geometry" />
+        <mxCell id="c_store" value="&lt;b&gt;Customer pages (no login)&lt;/b&gt;&lt;br&gt;/store/{tenantId} online store&lt;br&gt;?table={id} QR table ordering" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;spacing=6;" vertex="1" parent="g_clients">
+          <mxGeometry x="1030" y="36" width="190" height="88" as="geometry" />
         </mxCell>
-
-        <!-- App -->
-        <mxCell id="api1" value="FastAPI Instance 1&#10;(Stateless)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
-          <mxGeometry x="570" y="160" width="120" height="60" as="geometry" />
+        <mxCell id="c_device" value="&lt;b&gt;On every staff device:&lt;/b&gt; offline cache (store/data: menu, tables, settings, tax classes) · &lt;b&gt;outbox&lt;/b&gt; of bills made offline (client-generated order ids, replayed by POST /sync/push, kept on 401/402) · printing over ESC/POS (Bluetooth Classic / BLE / Web Bluetooth) or the system print dialog · barcodes Code128, EAN-13, QR" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;fillColor=#ffffff;strokeColor=#6c8ebf;rounded=1;dashed=1;" vertex="1" parent="g_clients">
+          <mxGeometry x="20" y="136" width="1240" height="58" as="geometry" />
         </mxCell>
-        <mxCell id="api2" value="FastAPI Instance 2&#10;(Stateless)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
-          <mxGeometry x="570" y="260" width="120" height="60" as="geometry" />
+        <mxCell id="g_edge" value="Edge" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#ffe6cc;swimlaneFillColor=#fff9f2;strokeColor=#d79b00;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="350" width="1280" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="worker" value="Celery Workers&#10;(Background Sync/Jobs)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
-          <mxGeometry x="570" y="360" width="120" height="60" as="geometry" />
+        <mxCell id="caddy" value="&lt;b&gt;Caddy 2&lt;/b&gt; (web container)&lt;br&gt;automatic HTTPS (Let's Encrypt) · serves the static web build&lt;br&gt;proxies /api/* and /health → backend:8000 · security headers" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="g_edge">
+          <mxGeometry x="420" y="36" width="440" height="62" as="geometry" />
         </mxCell>
-
-        <!-- Data -->
-        <mxCell id="pg_global" value="PostgreSQL&#10;(Global Routing DB)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
-          <mxGeometry x="850" y="80" width="120" height="80" as="geometry" />
+        <mxCell id="g_api" value="FastAPI backend · Python 3.11 · uvicorn × WEB_CONCURRENCY workers (default 2) · all routes under /api/v1" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#d5e8d4;swimlaneFillColor=#f5faf4;strokeColor=#82b366;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="500" width="1280" height="340" as="geometry" />
         </mxCell>
-        <mxCell id="pg_shared" value="PostgreSQL&#10;(Shared Tenant DB with RLS)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
-          <mxGeometry x="850" y="200" width="120" height="80" as="geometry" />
+        <mxCell id="g_biz" value="Business routers (staff and owner logins)" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#d5e8d4;swimlaneFillColor=#f5faf4;strokeColor=#82b366;fontStyle=1;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="g_api">
+          <mxGeometry x="16" y="38" width="760" height="206" as="geometry" />
         </mxCell>
-        <mxCell id="redis" value="Redis&#10;(Cache / Queue Broker)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
-          <mxGeometry x="850" y="320" width="120" height="80" as="geometry" />
+        <mxCell id="r_auth" value="&lt;b&gt;auth&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;login · refresh · devices&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="12" y="36" width="138" height="44" as="geometry" />
         </mxCell>
-        <mxCell id="minio" value="MinIO&#10;(Object Storage/PDFs)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
-          <mxGeometry x="850" y="440" width="120" height="80" as="geometry" />
+        <mxCell id="r_catalog" value="&lt;b&gt;catalog&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;menu · variants · import&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="160" y="36" width="138" height="44" as="geometry" />
         </mxCell>
-
-        <!-- Edges: Client -> Edge -->
-        <mxCell id="e1" edge="1" parent="1" source="pos_app" target="waf">
+        <mxCell id="r_orders" value="&lt;b&gt;orders&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;bills · pay · floor actions&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="308" y="36" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_tables" value="&lt;b&gt;tables&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;floor plan · QR&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="456" y="36" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_kitchen" value="&lt;b&gt;kitchen&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;KOT tickets · KDS&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="604" y="36" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_inventory" value="&lt;b&gt;inventory&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;stock ledger&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="12" y="88" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_crm" value="&lt;b&gt;crm&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;customers · loyalty&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="160" y="88" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_reports" value="&lt;b&gt;reports&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;sales · staff&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="308" y="88" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_admin" value="&lt;b&gt;admin&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;settings · modules · channels · brands · staff&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="456" y="88" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_access" value="&lt;b&gt;access&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;/access/me · roles · audit&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="604" y="88" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_offers" value="&lt;b&gt;offers&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;offer rules&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="12" y="140" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_email" value="&lt;b&gt;email&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;templates · delivery log&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="160" y="140" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_taxes" value="&lt;b&gt;taxes&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;tax classes · dated rates&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="308" y="140" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_sync" value="&lt;b&gt;sync&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;/sync/push · /sync/pull&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="456" y="140" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="r_ai" value="&lt;b&gt;ai&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;menu photo OCR&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_biz">
+          <mxGeometry x="604" y="140" width="138" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="g_own" value="Owner and platform" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#d5e8d4;swimlaneFillColor=#f5faf4;strokeColor=#82b366;fontStyle=1;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="g_api">
+          <mxGeometry x="792" y="38" width="226" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="r_subscription" value="&lt;b&gt;subscription&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;owner renewal · works while locked&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_own">
+          <mxGeometry x="13" y="36" width="200" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="r_owner" value="&lt;b&gt;owner&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;owner-only watch list · requests to Tallyko&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_own">
+          <mxGeometry x="13" y="92" width="200" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="r_platform" value="&lt;b&gt;platform&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;super admin console API&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_own">
+          <mxGeometry x="13" y="148" width="200" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="g_pub" value="Public and integrations" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#d5e8d4;swimlaneFillColor=#f5faf4;strokeColor=#82b366;fontStyle=1;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="g_api">
+          <mxGeometry x="1034" y="38" width="230" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="r_public" value="&lt;b&gt;public&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;/public/{tenant_id}: menu · QR and online orders · UPI payment claim · rate-limited per phone&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_pub">
+          <mxGeometry x="15" y="36" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="r_integrations" value="&lt;b&gt;integrations&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;/integrations/{channel}/orders/{tenant_id}: HMAC-signed aggregator webhook&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="g_pub">
+          <mxGeometry x="15" y="118" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="api_pipeline" value="&lt;b&gt;Every business request:&lt;/b&gt; get_current_user (JWT · sv / sid · 402 lock) → require(permission, module) → get_tenant_db (SET LOCAL ROLE tallyko_app + app.current_tenant_id, so Postgres RLS filters every query) → thin router" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;fillColor=#ffffff;strokeColor=#82b366;rounded=1;" vertex="1" parent="g_api">
+          <mxGeometry x="16" y="254" width="1248" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="api_services" value="&lt;b&gt;Services (business rules, app/services):&lt;/b&gt; access · auth_service · sessions · order_service · floor_service · pricing · offers · tax · channel_menu · menu_history · subscription · records_admin · email · audit · counters · menu_ocr · settings_service" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;fillColor=#ffffff;strokeColor=#82b366;rounded=1;" vertex="1" parent="g_api">
+          <mxGeometry x="16" y="296" width="1248" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="g_data" value="Data" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#e1d5e7;swimlaneFillColor=#f9f6fb;strokeColor=#9673a6;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="900" width="620" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="redis" value="&lt;b&gt;Redis 7&lt;/b&gt;&lt;br&gt;tenant config cache (status, paid_until, session_version) · rate limits · revoked session ids · daily-job lock · “add to my bill” idempotency keys" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="g_data">
+          <mxGeometry x="16" y="38" width="250" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres" value="&lt;b&gt;PostgreSQL 15&lt;/b&gt; · shared DB with Row-Level Security&lt;br&gt;38 tables (13 platform, 25 business)&lt;br&gt;role tallyko_app: no DELETE on business records; audit_logs and product_versions append-only&lt;br&gt;dedicated DB per tenant: routing only (tenant_configs.db_url)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="g_data">
+          <mxGeometry x="282" y="38" width="322" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="g_tasks" value="Background tasks · in-process asyncio tasks started in the API lifespan" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#fff2cc;swimlaneFillColor=#fffcf2;strokeColor=#d6b656;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="660" y="900" width="640" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="t_sched" value="&lt;b&gt;Subscription scheduler&lt;/b&gt;&lt;br&gt;daily 01:00 IST + catch-up on start&lt;br&gt;Redis lock: one worker runs it&lt;br&gt;signs out businesses whose paid_until + grace ended" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;spacing=6;" vertex="1" parent="g_tasks">
+          <mxGeometry x="16" y="38" width="296" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="t_email" value="&lt;b&gt;Email worker&lt;/b&gt;&lt;br&gt;delivers the email_logs queue&lt;br&gt;FOR UPDATE SKIP LOCKED (safe across workers)&lt;br&gt;status queued → sent / failed / skipped" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;spacing=6;" vertex="1" parent="g_tasks">
+          <mxGeometry x="328" y="38" width="296" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="g_ext" value="External services" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#eeeeee;swimlaneFillColor=#fafafa;strokeColor=#666666;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="100" width="350" height="970" as="geometry" />
+        </mxCell>
+        <mxCell id="x_upi" value="&lt;b&gt;UPI apps&lt;/b&gt; (GPay, PhonePe, Paytm …)&lt;br&gt;customer pays from the table QR page by upi:// deep link, then taps “I've paid”" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#eeeeee;strokeColor=#666666;fontSize=10;spacing=6;" vertex="1" parent="g_ext">
+          <mxGeometry x="20" y="30" width="310" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="x_agg" value="&lt;b&gt;Swiggy / Zomato / ONDC&lt;/b&gt;&lt;br&gt;signed (HMAC) webhook per channel → order arrives “placed” (or “open” with auto-accept).&lt;br&gt;Manual entry with the external id also works." style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#eeeeee;strokeColor=#666666;fontSize=10;spacing=6;" vertex="1" parent="g_ext">
+          <mxGeometry x="20" y="536" width="310" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="x_smtp" value="&lt;b&gt;SMTP provider&lt;/b&gt;&lt;br&gt;any SMTP account (SMTP_*); Mailpit in development;&lt;br&gt;emails are logged as “skipped” when not configured" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#eeeeee;strokeColor=#666666;fontSize=10;spacing=6;" vertex="1" parent="g_ext">
+          <mxGeometry x="20" y="841" width="310" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="e_cl_caddy" value="HTTPS · web app + /api/v1 JSON (JWT bearer)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="g_clients" target="caddy">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e2" edge="1" parent="1" source="web_dash" target="waf">
+        <mxCell id="e_caddy_api" value="reverse_proxy /api/* → backend:8000" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="caddy" target="g_api">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e3" edge="1" parent="1" source="waf" target="traefik">
+        <mxCell id="e_store_upi" value="UPI deep link" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="c_store" target="x_upi">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e4" edge="1" parent="1" source="kds_app" target="traefik">
+        <mxCell id="e_agg_int" value="signed POST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="x_agg" target="r_integrations">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Edges: Edge -> App -->
-        <mxCell id="e5" edge="1" parent="1" source="traefik" target="api1">
+        <mxCell id="e_api_redis" value="cache · rate limits · revoked sids" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.11;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="g_api" target="redis">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e6" edge="1" parent="1" source="traefik" target="api2">
+        <mxCell id="e_api_pg" value="SQL as tallyko_app (RLS)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.346;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="g_api" target="postgres">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Edges: App -> Data -->
-        <mxCell id="e7" edge="1" parent="1" source="api1" target="pg_global">
+        <mxCell id="e_api_tasks" value="started in lifespan" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;dashed=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="g_api" target="g_tasks">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e8" edge="1" parent="1" source="api1" target="pg_shared">
+        <mxCell id="e_sched_pg" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t_sched" target="postgres">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e9" edge="1" parent="1" source="api1" target="redis">
+        <mxCell id="e_email_smtp" value="SMTP" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t_email" target="x_smtp">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
-        <mxCell id="e10" edge="1" parent="1" source="api2" target="pg_shared">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e_email_pg" value="reads / updates the email_logs queue" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="t_email" target="postgres">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1136" y="1095" />
+              <mxPoint x="463" y="1095" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="e11" edge="1" parent="1" source="api2" target="minio">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="legend" value="Legend" style="swimlane;rounded=1;arcSize=4;html=1;startSize=24;collapsible=0;fillColor=#f3f4f6;swimlaneFillColor=#ffffff;strokeColor=#9ca3af;fontStyle=1;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="1125" width="1070" height="88" as="geometry" />
         </mxCell>
-
-        <!-- Edges: App -> Worker -->
-        <mxCell id="e12" edge="1" parent="1" source="api1" target="worker">
-          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="500" y="300" /></Array></mxGeometry>
+        <mxCell id="legend_sw0" value="" style="rounded=1;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="legend">
+          <mxGeometry x="12" y="32" width="22" height="16" as="geometry" />
         </mxCell>
-        <mxCell id="e13" edge="1" parent="1" source="worker" target="redis">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="legend_tx0" value="Clients" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="40" y="29" width="141" height="22" as="geometry" />
         </mxCell>
-        <mxCell id="e14" edge="1" parent="1" source="worker" target="pg_shared">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="legend_sw1" value="" style="rounded=1;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="legend">
+          <mxGeometry x="187" y="32" width="22" height="16" as="geometry" />
         </mxCell>
-
+        <mxCell id="legend_tx1" value="Edge (Caddy)" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="215" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw2" value="" style="rounded=1;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="legend">
+          <mxGeometry x="362" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx2" value="API / server" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="390" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw3" value="" style="rounded=1;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="legend">
+          <mxGeometry x="537" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx3" value="Background tasks" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="565" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw4" value="" style="rounded=1;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="legend">
+          <mxGeometry x="712" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx4" value="Data" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="740" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw5" value="" style="rounded=1;html=1;fillColor=#eeeeee;strokeColor=#666666;" vertex="1" parent="legend">
+          <mxGeometry x="887" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx5" value="External services" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="915" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed6" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="12" y="66" as="sourcePoint" />
+            <mxPoint x="40" y="66" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx6" value="request / call" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="46" y="55" width="135" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed7" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;dashed=1;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="187" y="66" as="sourcePoint" />
+            <mxPoint x="215" y="66" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx7" value="async, logical or optional" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="221" y="55" width="135" height="22" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>

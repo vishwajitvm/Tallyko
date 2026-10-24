@@ -1,0 +1,47 @@
+%% 07 · Kitchen item status
+%% order_items.kitchen_status per line, and how the KOT (ticket) status follows its lines
+%% (services/floor_service.py: sync_kot_status). Lines are never deleted.
+stateDiagram-v2
+    state "not sent (kot_id null)" as unsent
+    state "removed" as removed
+    state "pending" as pending
+    state "preparing" as preparing
+    state "ready" as ready
+    state "served" as served
+    state "void" as void
+
+    [*] --> unsent : item added, not sent yet
+    [*] --> pending : item added and sent (new KOT)
+    unsent --> pending : send to kitchen / accept online order
+    unsent --> removed : cancel before the kitchen has it<br/>(no reason or approval needed)
+
+    pending --> preparing : kitchen display or<br/>staff with kitchen.update
+    preparing --> ready
+    ready --> served
+
+    pending --> void : cancel after sending<br/>(orders.void_item + reason,<br/>optional wastage in stock)
+    preparing --> void
+    ready --> void
+
+    note right of removed
+        Hidden from staff, kept for the
+        owner's watch. Never charged,
+        never counted as sold.
+    end note
+
+    note right of void
+        Shown struck out as CANCELLED to the
+        kitchen and staff. Subtotal and tax 0.
+        Comp ("on the house") is separate:
+        price 0, comp_reason and comp_value kept.
+    end note
+
+    state "KOT status follows its lines" as kotrule {
+        direction LR
+        state "all lines void" as allvoid
+        state "KOT cancelled" as kotc
+        state "otherwise" as other
+        state "KOT = least advanced live line<br/>pending < preparing < ready < served" as kotmin
+        allvoid --> kotc
+        other --> kotmin
+    }

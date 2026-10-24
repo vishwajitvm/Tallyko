@@ -1,0 +1,49 @@
+%% 15 · Aggregator orders (Swiggy, Zomato, ONDC, magicpin)
+%% Two ways in: staff type the order in Billing, or a signed HMAC webhook. Both de-duplicate on
+%% (tenant, channel, external_order_id) and price items with that channel's menu.
+flowchart TB
+    subgraph In["How the order gets in"]
+        direction LR
+        manual["Manual entry in Billing<br/>channel + aggregator order id<br/>payment AGGREGATOR"]
+        hook["Webhook<br/>POST /integrations/{channel}/orders/{tenant_id}<br/>X-Tallyko-Signature = hex HMAC-SHA256(secret, body)"]
+    end
+
+    subgraph Guard["Webhook checks"]
+        direction TB
+        lim["Rate limit per business,<br/>256 KB body limit"]
+        sig{"Signature matches<br/>(constant-time)?"}
+        match["Match items: product id,<br/>then SKU / barcode, then exact name"]
+        unk["422 with the unmatched items"]
+        lim --> sig
+        sig -- "no" --> r401(["401 rejected"])
+        sig -- "yes" --> match
+        match -- "unmatched" --> unk
+    end
+
+    dup{"(tenant, channel, external_order_id)<br/>already exists?"}
+    same(["Return the existing order<br/>(never billed twice)"])
+
+    subgraph Price["Per-channel menu (services/channel_menu.py)"]
+        direction TB
+        cp["products.channel_prices<br/>{SWIGGY: {price: 289}, ZOMATO: {available: false}}"]
+        mk["else channel mark-up %<br/>(sales_channels.price_adjust_pct), rounded to the rupee"]
+        hid["hidden on this channel: refused"]
+    end
+
+    create["order_service.create_order<br/>server prices, GST, offers"]
+    st{"auto_accept on<br/>the channel?"}
+    placed["status placed<br/>Online orders inbox"]
+    open["status open<br/>KOT to the kitchen"]
+    rep["Reports by channel:<br/>amount, commission_pct, net"]
+
+    manual --> dup
+    hook --> lim
+    match -- "all matched" --> dup
+    dup -- "yes" --> same
+    dup -- "no" --> create
+    create --> Price
+    create --> st
+    st -- "no (webhook)" --> placed
+    st -- "yes, or staff entry" --> open
+    placed -- "staff accept" --> open
+    open --> rep

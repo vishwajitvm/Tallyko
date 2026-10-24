@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Tallyko POS",
+  "short_name": "Tallyko",
+  "description": "Point of sale for restaurants, cafés, cloud kitchens and retail stores.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "theme_color": "#0F766E",
+  "background_color": "#0F172A",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    { "src": "/logo192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/logo512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/logo512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

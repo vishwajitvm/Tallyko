@@ -1,0 +1,52 @@
+%% 02 · Containers
+%% The Expo app, Caddy, the FastAPI process (routers -> services, plus two in-process background tasks),
+%% PostgreSQL, Redis and SMTP. There is no separate worker container, queue broker or object storage.
+flowchart TB
+    subgraph App["Expo app - Expo SDK 57, RN 0.86, React 19, expo-router, zustand"]
+        direction LR
+        web["Web / PWA"]
+        android["Android APK / AAB"]
+        ios["iOS app or<br/>home-screen web app"]
+        local[("Device: offline cache<br/>+ outbox of offline bills")]
+    end
+
+    caddy["Caddy 2 (prod)<br/>HTTPS, static web build, proxies /api"]
+
+    subgraph API["FastAPI - Python 3.11, uvicorn workers"]
+        direction TB
+        mw["Middleware: tracing (X-Trace-ID), security headers,<br/>CORS, GZip, error envelope, /health"]
+        subgraph Routers["Routers under /api/v1"]
+            direction LR
+            rbiz["Business: auth, catalog, orders, tables,<br/>kitchen, inventory, crm, reports, admin,<br/>access, offers, email, taxes, sync, ai"]
+            rown["Owner and platform:<br/>subscription, owner, platform"]
+            rpub["Public: public (menu, QR orders,<br/>payment claim), integrations (webhook)"]
+        end
+        subgraph Services["Services - business rules"]
+            direction LR
+            sacc["access, auth_service,<br/>sessions"]
+            ssell["order_service, floor_service,<br/>pricing, offers"]
+            stax["tax, channel_menu,<br/>menu_history"]
+            splat["subscription,<br/>records_admin"]
+            sother["email, audit, counters,<br/>menu_ocr (RapidOCR)"]
+        end
+        subgraph Tasks["In-process background tasks (API lifespan)"]
+            direction LR
+            ew["Email worker<br/>every 5 s, SKIP LOCKED"]
+            sch["Subscription scheduler<br/>01:00 IST + catch-up"]
+        end
+        mw --> Routers --> Services
+    end
+
+    pg[("PostgreSQL 15<br/>tallyko_shared + RLS<br/>role tallyko_app")]
+    redis[("Redis 7<br/>tenant cache, rate limits,<br/>revoked sessions, job lock")]
+    smtp["SMTP server<br/>(Mailpit :8025 in dev)"]
+
+    web & android & ios --> caddy
+    local -. "replay /sync/push" .-> caddy
+    caddy --> mw
+    Services --> pg
+    Services --> redis
+    ew --> pg
+    ew --> smtp
+    sch --> pg
+    sch --> redis

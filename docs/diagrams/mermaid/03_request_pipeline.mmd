@@ -1,0 +1,41 @@
+%% 03 · Request pipeline
+%% What happens to one authenticated business request, in order:
+%% token checks (session version, revoked sid, subscription lock) -> require(permission, module) -> service -> RLS session.
+sequenceDiagram
+    autonumber
+    participant C as App (web / Android / iOS)
+    participant K as Caddy
+    participant M as Middleware (tracing, headers)
+    participant U as get_current_user
+    participant R as Redis
+    participant A as require(perm, feature)
+    participant S as Service (app/services)
+    participant D as PostgreSQL (role tallyko_app + RLS)
+
+    C->>K: HTTPS /api/v1/orders/{id}/pay + Bearer token
+    K->>M: proxy /api
+    M->>M: trace_id (X-Trace-ID), rate limit where the route asks
+    M->>U: decode access token (12 h)
+    alt platform token on a business route
+        U-->>C: 403 Platform admin accounts can't use business screens
+    end
+    U->>R: tenant config (status, paid_until, session_version), cached 10 min
+    U->>R: is session sid revoked?
+    alt token sv differs from session_version, or sid revoked
+        U-->>C: 401 Signed out (app clears tokens)
+    else paid_until + grace days has passed
+        U-->>C: 402 Subscription ended (renewal screen, outbox kept)
+    end
+    Note over U: renewal, profile, logout and account deletion<br/>use get_current_user_allow_lapsed and skip the 402
+    U->>A: TokenData(tenant_id, role, staff_id, sid)
+    A->>A: entitlements = plan modules + overrides - owner-hidden modules
+    A->>A: permissions = role permissions within enabled modules (owner = all)
+    alt module off or permission missing
+        A-->>C: 403 with a reason a shopkeeper understands
+    end
+    A->>S: Access(tenant_id, staff_id, permissions, features, limits)
+    S->>D: BEGIN, SET LOCAL ROLE tallyko_app, set_config(app.current_tenant_id)
+    S->>D: queries (WHERE tenant_id = ... and RLS)
+    D-->>S: only this business's rows
+    S->>S: audit.record(...) for sensitive actions
+    S-->>C: 200 JSON, or error envelope {success false, error {code, message, trace_id}}

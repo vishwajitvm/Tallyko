@@ -1,5 +1,3 @@
-#!/bin/bash
-# Placeholder for running Alembic DB migrations inside Docker
-
-echo "Running database migrations..."
-docker compose exec backend alembic upgrade head
+#!/usr/bin/env bash
+# Apply pending database migrations (they also run automatically when the backend starts)
+exec "$(dirname "$0")/db.sh" migrate "$@"

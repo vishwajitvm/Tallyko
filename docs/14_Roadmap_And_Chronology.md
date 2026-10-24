@@ -1,42 +1,30 @@
 # Roadmap & Chronology
 
-## 1. Build Order Strategy
+The feature specs in [`features/`](./features/) are numbered in the order they were built. As of **v2.0.0 (October 2026)** all of them exist in the code; this page records the build order and what is still open.
 
-Tallyko's development follows a strict chronological build order. Foundational infrastructure must be completely stable before higher-level features are layered on top. 
+## 1. Built (v2.0.0)
 
-This roadmap acts as the index for the detailed feature specifications found in `/docs/features/`.
+| Phase | Specs |
+|---|---|
+| Foundation | [001 Auth & tenant setup](./features/001_Auth_And_Tenant_Setup.md), [002 Product catalog](./features/002_Product_Catalog.md), [003 Core POS billing](./features/003_Core_POS_Billing.md), [Printing](./features/Printing.md) |
+| Restaurant | [004 Tables](./features/004_Table_Management.md), [005 Kitchen display](./features/005_Kitchen_Display_System.md), [017 Running bills on the floor](./features/017_Running_Bills_And_Floor.md) |
+| Retail and stock | [006 Barcodes](./features/006_Barcode_Scanner.md), [007 Inventory](./features/007_Inventory_Management.md) |
+| Customers and growth | [008 CRM & loyalty](./features/008_CRM_And_Loyalty.md), [011 Online store & QR ordering](./features/011_Online_Store.md), [012 Aggregators & cloud kitchens](./features/012_Aggregators_And_Cloud_Kitchens.md), [014 Offers, rewards & email](./features/014_Offers_Loyalty_Rewards_And_Email.md) |
+| Insight and setup | [009 Reports](./features/009_Analytics_Dashboard.md), [010 Menu from a photo](./features/010_AI_Menu_Generator.md), [015 GST & taxes](./features/015_GST_And_Tax_Management.md) |
+| Control and platform | [013 Staff, roles & access](./features/013_Staff_Roles_And_Access.md), [016 Super admin console](./features/016_Super_Admin_Console.md), [018 Subscriptions & sessions](./features/018_Subscriptions_Demo_And_Sessions.md), [019 Owner's watch, no deletes, menu history](./features/019_Owner_Watch_No_Deletes_And_Menu_History.md) |
 
-## 2. Phase 1: The Foundation (Core Multi-Tenant POS)
-This phase establishes the multi-vendor architecture and the absolute minimum functionality required to ring up a sale.
+## 2. Open (from the known gaps in `CLAUDE.md`)
 
-*   `001_Auth_And_Tenant_Setup.md`: Global user registration, tenant provisioning, JWT auth, and database routing logic.
-*   `002_Product_Catalog.md`: Categories, items, and pricing (the shared data model for both retail and restaurant).
-*   `003_Core_POS_Billing.md`: The offline-first cart, tax calculations (GST), generating an order, and Bluetooth thermal receipt printing.
+1. Aggregator auto-ingest needs Swiggy/Zomato partner approval; manual entry and the signed webhook are what exist.
+2. OCR reads Latin script only; handwritten boards are poor.
+3. Native Bluetooth printing is untested on physical printers in CI.
+4. Single-device revocation is checked in Redis (fails open).
+5. Dedicated-database tenants: no provisioning or per-tenant migration loop.
+6. Paid plans inside the iOS app would need an In-App Purchase decision.
+7. Subscription payments are claimed and approved by hand (no gateway, by design).
+8. Offers are evaluated online only; public store ordering doesn't take coupon codes yet.
+9. Production email needs an SMTP account in `.env` (`SMTP_*`); without one, emails are logged as `skipped`.
 
-## 3. Phase 2: Restaurant Specifics & KDS
-Expanding into the food service vertical, matching Shopto's core restaurant flow.
+## 3. Ideas not started
 
-*   `004_Table_Management.md`: Creating floor plans, assigning tables, and managing open orders/split bills.
-*   `005_KOT_And_KDS.md`: Auto-generating Kitchen Order Tickets, printing to kitchen printers, and the digital Kitchen Display System UI.
-
-## 4. Phase 3: Retail Specifics & Inventory
-Expanding into the retail vertical and adding stock management.
-
-*   `006_Barcode_And_Variants.md`: Hardware barcode scanner integration, SKU management, and complex item variants (size/color).
-*   `007_Inventory_Management.md`: Real-time stock tracking, supplier ledgers, purchase entries, and wastage tracking.
-
-## 5. Phase 4: Customer Facing & Growth
-Adding features that generate more revenue for the vendors.
-
-*   `008_QR_Digital_Menu.md`: Customer self-scanning, viewing the menu, and placing orders from their phone to the POS/KDS.
-*   `009_CRM_And_Loyalty.md`: Customer profiles, order history, and promotional campaigns.
-
-## 6. Phase 5: Advanced & AI Differentiation
-The final phase implements the features that make Tallyko vastly superior to competitors.
-
-*   `010_Analytics_Dashboard.md`: Comprehensive reporting across single or multiple branches.
-*   `011_AI_Menu_Upload.md`: Utilizing background workers to parse PDFs/images into structured product catalogs.
-*   `012_Online_Ordering_Store.md`: Generating a unique, commission-free web storefront for each vendor.
-
----
-*Note: The documents linked above reside in the `/docs/features/` directory and contain exhaustive, implementation-ready details for both business owners and developers.*
+Predictive low-stock alerts and pricing suggestions, a multi-branch combined view, table reservations, bulk SMS/WhatsApp campaigns, log dashboards, staging/canary deployments. Each must stay within the free-and-open-source rule.

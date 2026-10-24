@@ -1,85 +1,158 @@
-version: '3.8'
+# Tallyko — local development. Everything runs here; nothing to install except Docker.
+#
+#   docker compose up -d --build                     # API :8000 (/docs), web app :8081, Postgres, Redis
+#   docker compose --profile preview up -d --build   # + production web build behind Caddy on :8080
+#   docker compose --profile android run --rm android-build   # builds an installable APK into ./dist/
+#   docker compose exec backend pytest               # backend tests
+#
+# Production servers use docker-compose.prod.yml instead.
+name: tallyko
 
 services:
-# Proxy removed temporarily to avoid Windows docker socket errors
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: tallyko-backend
-    restart: always
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
-    environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://postgres:password_to_change_in_prod@db:5432/tallyko_shared}
-      - REDIS_URL=${REDIS_URL:-redis://cache:6379/0}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-storage:9000}
-      - JWT_SECRET=${JWT_SECRET:-generate_a_secure_random_key_here}
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-    depends_on:
-      - db
-      - cache
-    networks:
-      - tallyko_net
-
   db:
     image: postgres:15-alpine
-    container_name: tallyko-db
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password_to_change_in_prod}
       POSTGRES_DB: ${POSTGRES_DB:-tallyko_shared}
     volumes:
       - pg_data:/var/lib/postgresql/data
-    networks:
-      - tallyko_net
+    ports:
+      - "127.0.0.1:5433:5432"   # local tools (psql, DBeaver) on port 5433; never exposed to the network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   cache:
     image: redis:7-alpine
-    container_name: tallyko-cache
-    restart: always
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
     volumes:
       - redis_data:/data
-    networks:
-      - tallyko_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
-  storage:
-    image: minio/minio:RELEASE.2023-10-25T06-33-25Z
-    container_name: tallyko-storage
-    restart: always
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio_admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio_password_to_change}
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
     volumes:
-      - minio_data:/data
-    networks:
-      - tallyko_net
+      - ./backend:/app
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:password_to_change_in_prod@db:5432/tallyko_shared}
+      REDIS_URL: ${REDIS_URL:-redis://cache:6379/0}
+      JWT_SECRET: ${JWT_SECRET:-dev_only_secret_change_me_in_production_0123456789}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      APP_VERSION: ${APP_VERSION:-2.0.0}
+      TIMEZONE: ${TIMEZONE:-Asia/Kolkata}
+      # Dev email goes to Mailpit (http://localhost:8025); set real SMTP_* in .env to send for real
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@tallyko.local}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:8081}
+      # Bind-mount change events don't cross from Windows/macOS into Linux; poll so --reload sees edits
+      WATCHFILES_FORCE_POLLING: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
-  frontend:
+  mailpit:
+    # Catches every email the app sends in development; nothing leaves your machine
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-    container_name: tallyko-frontend
+      target: dev
+    restart: unless-stopped
     ports:
       - "8081:8081"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    networks:
-      - tallyko_net
+    # Live reload: run `docker compose up --watch` (or `docker compose watch`). Compose copies edited files
+    # into the container, which works on Windows/macOS where bind-mount file events don't reach Linux.
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend/src
+          target: /app/src
+        - action: sync
+          path: ./frontend/assets
+          target: /app/assets
+        - action: sync
+          path: ./frontend/public
+          target: /app/public
+        - action: rebuild
+          path: ./frontend/package.json
+        - action: sync+restart
+          path: ./frontend/app.json
+          target: /app/app.json
     environment:
-      - CHOKIDAR_USEPOLLING=true
+      EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+      EXPO_NO_TELEMETRY: "1"
+    depends_on:
+      backend:
+        condition: service_healthy
 
-networks:
-  tallyko_net:
-    driver: bridge
+  # Production web build served exactly as on a real server (Caddy + /api proxy) — http://localhost:8080
+  web-preview:
+    profiles: ["preview"]
+    build:
+      context: ./frontend
+      target: prod
+    ports:
+      - "8080:80"
+    environment:
+      SITE_ADDRESS: ":80"
+      BACKEND_UPSTREAM: backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Builds a release APK you can share and install on Android phones/tablets.
+  android-build:
+    profiles: ["android"]
+    build:
+      context: ./frontend
+      dockerfile: android.Dockerfile
+    volumes:
+      - ./frontend:/workspace/src:ro
+      - ./dist:/out
+      - android_gradle:/root/.gradle
+      - android_keystore:/keystore
+    environment:
+      EXPO_PUBLIC_API_URL: ${APK_API_URL:-}
+      APP_VERSION_CODE: ${APP_VERSION_CODE:-1}
 
 volumes:
   pg_data:
   redis_data:
-  minio_data:
+  android_gradle:
+  android_keystore:

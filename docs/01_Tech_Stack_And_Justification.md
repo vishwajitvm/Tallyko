@@ -1,104 +1,86 @@
 # Tech Stack & Justification
 
-## 1. Core Principles & Constraints
+## 1. Constraints
 
-The technology stack for Tallyko is strictly governed by the following constraints:
-1.  **Cross-Platform Mobile:** A single codebase must output native apps for both Android and iOS.
-2.  **Backend:** Must be Python-based.
-3.  **Infrastructure:** Everything runs in Docker via Docker Compose (no manual local installs).
-4.  **Open Source Only:** 100% free/open-source tooling through dev and deployment. No proprietary, vendor-locked BaaS (e.g., Firebase).
-5.  **Multi-Tenant Architecture:** The stack must support a shared DB with schema/row isolation, and dynamic routing to dedicated vendor databases.
-6.  **Observability:** Mandatory use of `tracenest` for logging across all services.
+1. **One codebase for every device:** web (laptop/desktop, installable PWA), Android (APK + Play Store), iOS (App Store).
+2. **Python backend.**
+3. **Docker Compose for everything** — development, preview, Android builds and production.
+4. **Free & open source only**, with no paid APIs and no trials (OCR, maps, push etc. must be self-hosted or permanently free).
+5. **Multi-tenant** with database-enforced isolation, plus the option of a dedicated database per vendor.
+6. **Structured logging** with `tracenest`.
 
-## 2. Selected Technologies
+## 2. Selected technologies (v2.0.0)
 
-### A. Frontend / Mobile App
-*   **Framework:** **React Native** (or **Flutter**) 
-    *   *Justification:* Both are robust open-source frameworks that compile to Android and iOS from a single codebase. Given the offline-first requirement, React Native with WatermelonDB or Flutter with Isar/Drift are strong combinations. (Assumed: React Native for broad ecosystem support).
-*   **Local Storage (Offline-First):** **WatermelonDB** (if React Native) or **SQLite/Isar** (if Flutter).
-    *   *Justification:* Highly optimized for offline-first data synchronization, capable of handling complex relational data on the device and syncing efficiently to the backend.
+| Layer | Choice | Why |
+|---|---|---|
+| App framework | **Expo SDK 57 + React Native 0.86 + React 19**, TypeScript, **expo-router** | One codebase → web, Android, iOS. File-based routing with real URLs on the web (deep links like `/pos?table=…`, public `/store/<id>` pages). Expo's Continuous Native Generation means no hand-maintained `android/`/`ios/` folders. |
+| Design system | Own tokens + components (`frontend/src/components/ui`), Inter font, Ionicons | Consistent professional look in light/dark, no heavy UI kit to fight. |
+| Client state & offline | **zustand** + AsyncStorage persistence; an **outbox** of client-id'd bills replayed through `/sync/push` | Works identically on web and native; the server treats the client id as an idempotency key, so retries never duplicate a bill. (WatermelonDB was dropped — native-only and heavier than needed.) |
+| Secure token storage | **expo-secure-store** (Keychain/Keystore); localStorage on web | Store policies + basic hygiene. |
+| Printing | **ESC/POS** encoder in TS; **react-native-bluetooth-classic** (Android SPP printers), **react-native-ble-plx** (BLE, Android/iOS), **Web Bluetooth** (Chrome/Edge), **expo-print** / browser print dialog (AirPrint, USB printers) | Cheap 58/80 mm Indian thermal printers are mostly Bluetooth Classic; iOS only allows BLE; every platform has a print-dialog fallback. |
+| Barcodes | Own Code128 / EAN-13 / QR encoders (QR via `qrcode-generator`), **expo-camera** scanning, keyboard-wedge scanner support | Bill barcodes, product labels, UPI QR on bills — offline, no services. |
+| Backend | **FastAPI** (async) on Uvicorn, **Pydantic v2** | Fast, typed, automatic OpenAPI docs. |
+| Database | **PostgreSQL 15** with **Row-Level Security**, **SQLAlchemy 2 (async)**, **Alembic** | Tenant isolation enforced by the database as a backstop to application filters; forward-only migrations. |
+| Cache / rate limiting | **Redis 7** | Sliding-window rate limits, tenant routing cache. Fails open so billing never stops if Redis is down. |
+| Auth | **PyJWT** (access + refresh tokens), **bcrypt** | python-jose and passlib were replaced (security advisories / unmaintained). |
+| Menu photo OCR | **RapidOCR** (PaddleOCR models on ONNX Runtime, CPU) + own layout parser | Free, offline, far more accurate than Tesseract on photographed menus; ~1 s per photo on CPU; ARM64 wheels for free ARM servers. |
+| Web server / TLS | **Caddy 2** | Serves the web build, proxies `/api`, gets free Let's Encrypt certificates automatically. Replaces the planned Traefik (simpler, no Docker-socket access needed). |
+| Android builds | Docker image with JDK 17 + Android SDK 36 (`frontend/android.Dockerfile`) | Free, reproducible signed APK/AAB without Android Studio or paid cloud builds. `eas.json` is included for those who prefer EAS. |
+| Logging | **tracenest** JSON logs with trace ids | Mandated; each response carries `X-Trace-ID`. |
 
-### B. Backend API
-*   **Framework:** **FastAPI** (Python)
-    *   *Justification:* Highly performant, async-native, and provides automatic OpenAPI (Swagger) documentation. It is the modern standard for Python APIs and handles the high concurrency required for multi-tenant SaaS environments exceptionally well.
-*   **App Server:** **Uvicorn / Gunicorn**
-    *   *Justification:* Standard, production-grade ASGI servers for running FastAPI applications inside Docker.
+| Email | Plain **SMTP** (any provider; **Mailpit** in development) with a queue table and an in-process worker | Free tiers of Gmail/Brevo/Zoho work; nothing to pay for or run. |
+| Background jobs | **asyncio tasks** in the API lifespan: email worker (`FOR UPDATE SKIP LOCKED`) and the 01:00 IST subscription scheduler (Redis lock) | No broker or worker container needed at this scale. |
 
-### C. Database Layer
-*   **Relational Database:** **PostgreSQL**
-    *   *Justification:* The gold standard for open-source relational databases. It natively supports Row-Level Security (RLS) and schema isolation, which are critical for our multi-tenant architecture. It also robustly handles JSONb for flexible metadata.
-*   **Migration Tool:** **Alembic**
-    *   *Justification:* The standard migration tool for SQLAlchemy/Python, easily containerized and executed in CI/CD pipelines.
+Removed from the original plan because nothing used them: Celery/ARQ workers (OCR runs in a thread pool; email and the daily job are in-process tasks), MinIO (no file storage needed — menu photos are processed in memory and not kept), Traefik (replaced by Caddy), WatermelonDB/SQLite on devices (replaced by the zustand cache + outbox).
 
-### D. Caching & Background Processing
-*   **In-Memory Cache & Message Broker:** **Redis**
-    *   *Justification:* Fast, open-source, and perfect for session management, rate limiting, and acting as the message broker for background tasks.
-*   **Task Queue:** **Celery** (with Redis) or **ARQ** (Async Redis Queue)
-    *   *Justification:* Handles heavy background jobs (e.g., AI menu processing, report generation, email sending) asynchronously without blocking the main API threads.
+## 3. Flow
 
-### E. File & Object Storage
-*   **Storage Server:** **MinIO**
-    *   *Justification:* An open-source, S3-compatible object storage server that can be self-hosted. Perfect for storing user uploads, AI-processed PDFs, product images, and digital receipts without paying AWS/GCP fees.
+How the pieces connect (containers and services in [02_System_Architecture.md](./02_System_Architecture.md)):
 
-### F. Security & Auth
-*   **Token Storage:** **Expo SecureStore**
-    *   *Justification:* Provides encrypted, native secure storage (Keychain on iOS, Keystore on Android) to safely hold JWT Access and Refresh tokens instead of plaintext `AsyncStorage`.
-*   **Security Auditing:** **pip-audit & npm audit**
-    *   *Justification:* Integrated directly into the GitHub Actions CI pipeline to proactively scan dependency trees for known vulnerabilities before merging PRs.
-
-### G. AI & Processing
-*   **OCR Engine:** **Tesseract OCR (pytesseract)**
-    *   *Justification:* Fully open-source and free vision engine used to parse menu images directly on the backend without relying on paid, proprietary APIs like OpenAI.
-
-### H. Infrastructure & Deployment
-*   **Containerization:** **Docker & Docker Compose**
-    *   *Justification:* Ensures consistency across environments. Every dependency runs in isolation.
-*   **Reverse Proxy / API Gateway:** **Traefik** or **Nginx**
-    *   *Justification:* Traefik provides dynamic routing and automatic SSL (Let's Encrypt), crucial for routing traffic to dedicated vendor DB instances or specific tenant domains seamlessly.
-
-### I. Observability & Monitoring
-*   **Logging:** **tracenest** (Python Package)
-    *   *Justification:* Mandated by requirements. Tracenest will be integrated into FastAPI middleware and Celery workers to emit structured logs.
-*   **Log Aggregation (Assumed):** **Grafana Loki + Promtail** (or ELK stack)
-    *   *Justification:* Open-source stack to ingest the logs emitted by tracenest for centralized searching and dashboarding.
-
-## 3. Technology Flow Summary
-
+<!-- diagram: 01_system_context drawio=Tallyko_System_Architecture -->
 ```mermaid
 flowchart LR
-    subgraph Client
-        App[Mobile App \n React Native]
-        Web[Web Dashboard \n React/Vue]
+    subgraph People["People"]
+        owner(["Owner / manager"])
+        staff(["Cashier / waiter"])
+        cook(["Kitchen staff"])
+        guest(["Shop customer"])
+        admin(["Tallyko super admin / support"])
     end
 
-    subgraph API Gateway
-        Proxy[Traefik / Nginx]
+    subgraph Clients["Clients - one Expo app (web, Android, iOS)"]
+        pos["POS, tables, orders, menu,<br/>reports, settings, owner's watch"]
+        kds["Kitchen display<br/>(same app, kitchen role, polls 5 s)"]
+        console["Super admin console<br/>/admin routes"]
+        store["Public pages<br/>/store/{tenantId} and ?table={id}"]
     end
 
-    subgraph Backend Services
-        API[FastAPI Server]
-        Worker[Celery Workers]
+    printer[("Bluetooth / USB<br/>thermal printer")]
+
+    subgraph Platform["Tallyko server (Docker Compose)"]
+        api["Caddy + FastAPI<br/>/api/v1"]
+        data[("PostgreSQL + Redis")]
     end
 
-    subgraph Data Layer
-        PG[(PostgreSQL \n Shared DB)]
-        PG_Dedicated[(PostgreSQL \n Dedicated DB)]
-        Redis[(Redis \n Cache/Queue)]
-        MinIO[(MinIO \n Object Storage)]
+    subgraph Outside["Outside services"]
+        smtp["SMTP provider<br/>(Mailpit in dev)"]
+        upi["Customer's UPI app<br/>(deep link, no gateway)"]
+        agg["Swiggy / Zomato / ONDC<br/>or a bridge (HMAC webhook)"]
     end
 
-    App --> Proxy
-    Web --> Proxy
-    Proxy --> API
-    API --> PG
-    API -.-> PG_Dedicated
-    API --> Redis
-    API --> MinIO
-    API --> Worker
-    Worker --> Redis
-    Worker --> PG
-    
-    style App fill:#f9f,stroke:#333,stroke-width:2px
-    style PG fill:#bbf,stroke:#333,stroke-width:2px
-    style PG_Dedicated fill:#fbf,stroke:#333,stroke-width:2px
+    owner --> pos
+    staff --> pos
+    cook --> kds
+    guest --> store
+    admin --> console
+
+    pos -- "ESC/POS, print dialog" --> printer
+    pos & kds & console & store -- "HTTPS JSON" --> api
+    api --> data
+    api -- "queued emails" --> smtp
+    store -. "upi://pay link" .-> upi
+    agg -- "signed order webhook" --> api
 ```
+
+*Diagram source: [`01_system_context.mmd`](diagrams/mermaid/01_system_context.mmd) · [SVG](diagrams/rendered/01_system_context.svg) · draw.io: [`Tallyko_System_Architecture.drawio`](diagrams/Tallyko_System_Architecture.drawio)*
+<!-- /diagram -->

@@ -1,0 +1,46 @@
+%% 10 · Subscription lifecycle (Tallyko plans for a business)
+%% A business works while tenant_configs.paid_until (+ grace days) is in the future. Period kinds are stored in each
+%% subscription's immutable snapshot (snap_entitlements.kind). New periods continue from paid_until.
+stateDiagram-v2
+    state "Free demo (trial)" as trial
+    state "Paid" as paid
+    state "Complimentary" as comp
+    state "Development access (no expiry)" as dev
+    state "Grace (grace_days, default 0)" as grace
+    state "Lapsed / locked (402)" as lapsed
+    state "Renewal claim pending" as claim
+
+    [*] --> trial : sign-up (default demo length)
+    [*] --> lapsed : demo length set to 0
+
+    trial --> paid : payment recorded
+    paid --> paid : renew early
+    trial --> grace : period ends
+    paid --> grace : period ends
+    comp --> grace : period ends
+    grace --> lapsed : daily 01:00 IST check
+
+    lapsed --> claim : owner submits "I've paid"
+    claim --> paid : super admin approves
+    claim --> lapsed : super admin rejects
+
+    lapsed --> comp : super admin
+    lapsed --> dev : super admin
+    dev --> lapsed : switched off
+
+    note right of lapsed
+        Every business API answers 402.
+        Every device is signed out.
+        Nothing is deleted, offline bills
+        stay in the outbox, store and QR
+        ordering stop. Renewal, profile,
+        logout, account deletion still work.
+    end note
+
+    note left of dev
+        The super admin can record a payment,
+        give a complimentary period or switch on
+        development access from any state.
+        Switching development off returns to
+        any paid time left, else locked.
+    end note

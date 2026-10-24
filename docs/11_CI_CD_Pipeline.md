@@ -1,68 +1,50 @@
 # CI/CD Pipeline
 
-## 1. Automation Philosophy
+## 1. Philosophy
 
-To ensure reliability and prevent the "performance regressions after updates" flaw seen in competitors, Tallyko relies on an automated CI/CD (Continuous Integration / Continuous Deployment) pipeline. 
+Competitors break shops with bad updates. Tallyko's defence is: every change is tested automatically, migrations are forward-only and tested both ways, the API keeps old `/api/v1` shapes, and the POS keeps billing offline if the server is briefly down.
 
-No developer is permitted to manually deploy code to production. All changes must pass through automated testing and build phases before being rolled out.
+## 2. What CI does today (`.github/workflows/ci.yml`)
 
-## 2. Pipeline Stages (GitHub Actions / GitLab CI)
+Runs on GitHub Actions for every push and pull request to `master`/`main`.
 
-The pipeline is triggered upon pushing to specific branches (`main` for production, `staging` for the test environment).
-
-### Stage 1: Integration, Testing & Security Auditing
-*   **Workflow file:** `.github/workflows/ci.yml` is executed on every push and pull request.
-*   **Security Auditing:** Runs `pip-audit` for the Python backend and `npm audit` for the React Native frontend to catch vulnerable transitive dependencies.
-*   **Linting & Formatting:** Enforces Python (PEP8/Black) and JavaScript/TypeScript (Prettier/ESLint) standards.
-*   **Unit Tests:** Executes automated tests via `pytest` against the FastAPI backend, utilizing a dynamically injected `NullPool` database connection to ensure isolated test environments.
-
-### Stage 2: Build & Package
-*   **Backend:** Docker images for the API and Worker are built and tagged with the git commit hash.
-*   **Mobile App:** Trigger cloud build services (like EAS Build for React Native or Fastlane) to compile the `.apk` (Android) and `.ipa` (iOS) files.
-*   **Artifact Registry:** Docker images are pushed to a container registry (e.g., GitHub Packages or Docker Hub).
-
-### Stage 3: Deployment (Backend)
-*   **Staging:** Immediately deployed to the staging server.
-*   **Production (Staged Rollout):** Deploys to production using a rolling update strategy via Docker Compose or Swarm, ensuring zero downtime.
-
-## 3. Staged Rollout Strategy
-
-To prevent system-wide outages from a bad update:
-
-1.  Traefik routes 90% of traffic to the older API containers and 10% to the newly deployed container (Canary release).
-2.  The pipeline monitors logs (via the tracing setup described in `09_Logging_And_Observability.md`) for 500 errors in the canary container.
-3.  If error rates spike, the pipeline automatically aborts the rollout and routes 100% of traffic back to the old version.
-4.  If successful, the rollout expands to 100% over a defined time window.
-
-## 4. Pipeline Architecture Diagram
+| Job | Steps |
+|---|---|
+| `backend` (Python 3.11, Postgres 15 + Redis 7 service containers) | install OCR system libraries → `pip install -r requirements-dev.txt` → `pip-audit -r requirements.txt` → migrations **up, one down, up again** → `pytest` (unit + integration on a real database) |
+| `frontend` (Node 22) | `npm ci` → `tsc --noEmit` → `jest` → `expo export --platform web` (the production web build) → `npm audit --omit=dev --audit-level=high` |
 
 ```mermaid
-flowchart TD
-    Developer[Developer Push to main]
-    
-    subgraph CI [Continuous Integration]
-        Lint[Lint & Code Quality]
-        Test[Unit & Integration Tests]
-        Build[Build Docker Images]
-        Registry[(Container Registry)]
+flowchart LR
+    push(["Push / pull request<br/>to master or main"]) --> be & fe
+    subgraph be["backend job"]
+        direction TB
+        b1["pip-audit"] --> b2["alembic upgrade head,<br/>downgrade -1, upgrade head"] --> b3["pytest -q<br/>(Postgres + Redis services)"]
     end
-    
-    subgraph CD [Continuous Deployment]
-        DeployStaging[Deploy to Staging]
-        DeployCanary[Deploy Canary to Prod (10%)]
-        Monitor[Monitor Error Rates]
-        RolloutFull[Full Production Rollout]
-        Rollback[Automated Rollback]
+    subgraph fe["frontend job"]
+        direction TB
+        f1["tsc --noEmit"] --> f2["jest"] --> f3["expo export (web build)"] --> f4["npm audit (prod, high+)"]
     end
-
-    Developer --> Lint
-    Lint --> Test
-    Test --> Build
-    Build --> Registry
-    Registry --> DeployStaging
-    DeployStaging --> DeployCanary
-    
-    DeployCanary --> Monitor
-    Monitor --"If Errors Spike"--> Rollback
-    Monitor --"If Healthy"--> RolloutFull
+    be & fe --> ok(["Green: safe to deploy by hand"])
 ```
+
+Locally, the same checks are:
+
+```bash
+docker compose exec backend python -m pytest -q
+docker compose exec backend python manage.py db:check
+cd frontend && npx tsc --noEmit && npx jest
+```
+
+## 3. Deployment (manual)
+
+There is **no automated deployment, container registry, staging server or canary release**. A release is:
+
+1. Bump `VERSION`, `frontend/app.json` `expo.version`, add `changelog/vX.Y.Z.md` and update `CHANGELOG.md`.
+2. On the server: `git pull && docker compose -f docker-compose.prod.yml up -d --build`. The backend migrates on start; Caddy keeps serving.
+3. Android: `docker compose --profile android run --rm android-build`, upload the AAB to Play (or share the APK). iOS: EAS build if an Apple account is set up.
+
+Rollback: check out the previous tag and run the same `up -d --build`. This is safe because migrations within a release are non-destructive ([13](./13_Reliability_And_Rollback.md), [19](./19_Database_Migrations.md)).
+
+## 4. Not built
+
+Image builds in CI, a registry, staging, canary/weighted routing (the old plan used Traefik, which is not used), automatic rollback on error rates, and Fastlane/EAS in CI. Anything added must stay free.

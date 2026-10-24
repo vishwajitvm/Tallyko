@@ -12,7 +12,7 @@ The Inventory Management module is the backbone for operational efficiency, ensu
 ## 3. How to Use
 
 ### A. Initializing Stock
-1. Go to the **Catalog** tab and create a product.
+1. Go to **Menu** and create or edit an item.
 2. Toggle **Track Inventory** to ON.
 3. Enter the current physical stock count and the **Low Stock Alert** threshold.
 
@@ -33,29 +33,22 @@ The Inventory Management module is the backbone for operational efficiency, ensu
 
 ## 4. Under the Hood (Data Flow)
 
-```mermaid
-flowchart TD
-    subgraph Transactions
-        Sale[New Sale Completed]
-        Purchase[Supplier Delivery Added]
-        Waste[Damage Logged]
-    end
-    
-    subgraph Ledger [Inventory Logs Table]
-        LogSale[-3 Units (Reason: Sale #123)]
-        LogPurch[+50 Units (Reason: Restock)]
-        LogWaste[-1 Unit (Reason: Spoilage)]
-    end
-    
-    subgraph Current State
-        Total[Current Stock Calculation<br>SUM(Logs)]
-    end
+Stock on hand is the sum of `inventory_logs.quantity_change` per product: an append-only ledger the app's database role cannot delete from. Only products with `track_stock` are counted.
 
-    Sale --> LogSale
-    Purchase --> LogPurch
-    Waste --> LogWaste
-    
-    LogSale --> Total
-    LogPurch --> Total
-    LogWaste --> Total
+```mermaid
+flowchart LR
+    subgraph Events["What moves stock"]
+        direction TB
+        sale["Bill completed<br/>reason sale, -qty per billable line"]
+        cancel["Completed bill cancelled<br/>reason return, +qty"]
+        recv["Stock received<br/>POST /inventory/receive (restock, unit cost)"]
+        waste["Wastage / adjustment<br/>POST /inventory/adjust"]
+        void["Kitchen item cancelled<br/>with 'book as wastage'"]
+    end
+    ledger[("inventory_logs<br/>product, location, quantity_change,<br/>reason, note, unit_cost, order_id")]
+    total["Stock on hand = SUM(quantity_change)<br/>low-stock when below the item's threshold<br/>(or the business default)"]
+    Events --> ledger --> total
+    total --> ui["GET /inventory, /inventory/low-stock,<br/>/inventory/logs, /reports/wastage"]
 ```
+
+Offline bills apply as differences when they sync, so nothing is overwritten. Tests: `backend/tests/integration/test_orders.py` (stock deduction and reversal), `test_floor.py` (wastage on cancel).

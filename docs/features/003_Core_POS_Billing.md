@@ -14,76 +14,121 @@ Billing is the lifeblood of any business. We researched Shopto and competitors a
 
 ### Edge Cases
 *   *What happens if the internet drops mid-order?* Absolutely nothing changes for the cashier. They keep ringing up orders, and receipts keep printing. Tallyko saves everything locally and automatically syncs to the cloud when the internet comes back.
-*   *What if a customer changes their mind about an item?* Swiping left on an item in the cart instantly removes it.
+*   *What if a customer changes their mind about an item?* Remove it from the cart before paying. On a running table bill, items not yet sent to the kitchen are removed straight away; items the kitchen already has need a reason and a manager ([017](./017_Running_Bills_And_Floor.md)).
+*   *Can a cashier type a lower price?* No. The server prices every bill from the menu; discounts need the discount permission and are recorded.
 
 ---
 
 ## Section 2 — For the Developer
 
-### Data Model Touched (Shared Tenant DB)
-*   `orders`: `id`, `tenant_id`, `type` (walk_in, dine_in), `total_amount`, `tax_amount`, `discount_amount`, `status`, `sync_status`
-*   `order_items`: `id`, `order_id`, `product_id`, `quantity`, `unit_price`, `subtotal`
-*   `payments`: `id`, `order_id`, `method` (CASH, CARD, UPI), `amount`
+### Data model (tenant tables)
+*   `orders`: `id` (client-generated UUID allowed), `type` (`DINE_IN`, `TAKEAWAY`, `DELIVERY`, `RETAIL_WALKIN`), `channel`, `status`, `payment_status`, `subtotal`, `discount_amount`, `tax_amount`, `round_off`, `total_amount`, `bill_type`, `supply_type`, `invoice_no`, `code`, offer fields, loyalty points, `waiter_id`, `settled_by`
+*   `order_items`: product, variant, quantity, `unit_price`, `tax_rate`, `tax_components`, `hsn_sac`, `subtotal` — a snapshot that never changes when the menu does
+*   `payments`: `method` (`CASH`, `CARD`, `UPI`, `WALLET`, `AGGREGATOR`, `CREDIT`, `OTHER`), `amount`, `reference`
+*   Full ERD: [17_erd_business](../diagrams/mermaid/17_erd_business.mmd)
 
-### API Endpoints
-*   *(Note: Most creation happens via the Offline Sync Engine, see `07_Offline_Sync_Strategy.md`)*
-*   `POST /api/v1/sync/push`: The mobile app pushes locally completed `orders`, `order_items`, and `payments` to the server.
-*   `GET /api/v1/orders`: Fetch historical orders for receipt re-printing or refunds.
+### API endpoints
+*   `POST /api/v1/orders` — create a bill (counter sale with payments, or an open table bill).
+*   `POST /orders/{id}/pay` — payments (split, cash change), optional discount, points, offer.
+*   `GET /orders`, `GET /orders/{id}` — history, reprint; `POST /orders/{id}/cancel` with a reason.
+*   `POST /sync/push` — the same create request, replayed from the offline outbox ([07](../07_Offline_Sync_Strategy.md)).
 
-### Request/Response Shape (Sync Push payload for an Order)
-**Request:**
-```json
+### Request (counter sale)
+```jsonc
 {
-  "orders": [
-    {
-      "id": "ord_123",
-      "total_amount": 250.00,
-      "status": "completed",
-      "items": [
-        { "product_id": "P12", "quantity": 1, "unit_price": 150.00 },
-        { "product_id": "P15", "quantity": 1, "unit_price": 100.00 }
-      ],
-      "payments": [
-        { "method": "CASH", "amount": 250.00 }
-      ]
-    }
-  ]
+  "id": "6f1c…",                     // generated on the device: idempotency key
+  "order_type": "TAKEAWAY",
+  "channel": "POS",
+  "items": [
+    { "product_id": "P12", "quantity": 1 },
+    { "product_id": "P15", "variant_id": "V2", "quantity": 2 }
+  ],
+  "customer_phone": "9876543210",
+  "discount": { "type": "percent", "value": 10 },
+  "payments": [{ "method": "CASH", "amount": 500 }],
+  "auto_offers": true
 }
 ```
+No prices or totals are sent. The response is the priced order with `change` for cash.
 
-### Validation Rules
-*   Total order amount must equal the sum of item subtotals plus tax minus discount.
-*   Payment amounts must equal or exceed the total order amount to mark status as `completed`.
-*   Product IDs must exist in the database (validated during sync).
+### Pricing
+The server prices every bill in this order: channel price → GST class in effect at that time → offer → manual discount → GST on the discounted value → round to the rupee. GST applies only with a valid GSTIN; otherwise the bill is a Bill of Supply.
 
-### Multi-Tenant Considerations
-Orders pushed from the client are inherently scoped to the `tenant_id` of the JWT used during the sync request.
+<!-- diagram: 05_pricing_pipeline drawio=Tallyko_Order_Flow -->
+```mermaid
+flowchart TB
+    in(["Client sends: product_id, variant_id,<br/>quantity, channel, order type,<br/>offer_id / code, discount"])
 
-### Logging Events (tracenest)
-*   `order_synced`: Logs when a batch of offline orders successfully persists to the cloud. Includes `order_count` and `tenant_id`.
+    subgraph Line["Per line"]
+        direction TB
+        ch["1 · Channel price<br/>channel_menu.unit_price: own channel price,<br/>else base + variant modifier + channel mark-up %<br/>(rounded to the rupee); hidden item = refused"]
+        tx["2 · GST class in effect at that time<br/>TaxResolver: product class, else business default,<br/>rate row with latest effective_from"]
+    end
 
-### Engineering Complexity Rating
-**High.** The UI requires complex local state management (managing the cart, calculating taxes on the fly). The integration with Bluetooth ESC/POS thermal printers for local receipt generation requires native module bridging in React Native. The offline-first sync mechanism requires careful conflict resolution logic on the backend.
+    subgraph Gst["GST only with a valid GSTIN"]
+        direction TB
+        reg{"gst_registration = regular<br/>and GSTIN valid (mod-36)?"}
+        inv["Tax Invoice<br/>CGST + SGST (intra) or IGST (inter)"]
+        bos["Bill of Supply<br/>0% GST (composition, unregistered,<br/>or GSTIN missing)"]
+        reg -- "yes" --> inv
+        reg -- "no" --> bos
+    end
 
-### Sequence Diagram (Offline-First Flow)
+    subgraph Bill["Whole bill"]
+        direction TB
+        off["3 · Offer (services/offers.py, pure)<br/>schedule, channel, minimum, loyalty visits, caps<br/>-> line discounts or a free Rs 0 line"]
+        disc["4 · Manual discount (flat or %)<br/>+ loyalty points redeemed"]
+        gst["5 · GST on the discounted value<br/>prices incl. or excl. tax"]
+        rnd["6 · Round off to the rupee"]
+        off --> disc --> gst --> rnd
+    end
+
+    snap[("Saved on order_items:<br/>unit_price, tax_rate, tax_components,<br/>hsn_sac, subtotal (snapshot)<br/>orders: subtotal, discount, tax,<br/>round_off, total, bill_type")]
+
+    in --> ch --> tx --> reg
+    inv --> off
+    bos --> off
+    rnd --> snap
+    snap --> pay["On full payment: invoice no. per financial year,<br/>stock deduction, loyalty points, offer redemption,<br/>customer e-receipt / reward emails"]
+```
+
+*Diagram source: [`05_pricing_pipeline.mmd`](../diagrams/mermaid/05_pricing_pipeline.mmd) · [SVG](../diagrams/rendered/05_pricing_pipeline.svg) · draw.io: [`Tallyko_Order_Flow.drawio`](../diagrams/Tallyko_Order_Flow.drawio)*
+<!-- /diagram -->
+
+When the bill is fully paid it becomes `completed`: invoice number for the financial year, stock deduction, loyalty points, offer redemption and customer emails. Lifecycle: [06_order_lifecycle](../diagrams/mermaid/06_order_lifecycle.mmd).
+
+### Validation rules
+*   1–200 items, quantity 1–9999; percent discount ≤ 100; up to 10 payments.
+*   Every product, variant, table, customer and brand id must belong to the business and be sold on the chosen channel.
+*   Discounts and points need `orders.discount` and must be applied before the first payment.
+*   Offline `created_at` is kept, clamped to "not in the future and not older than 30 days".
+
+### Multi-tenant considerations
+`require("orders.create")` + `get_tenant_db`; the tenant comes from the token, RLS underneath. The client's `id` is unique across the database, so a replay returns the existing bill.
+
+### Logging (tracenest)
+`[Billing]` lines for created, paid and cancelled bills with `tenant_id`; `[Sync]` for pushes. Cancels and discounts are written to the audit log (owner's watch).
+
+### Sequence (sale that goes offline)
 ```mermaid
 sequenceDiagram
-    participant Cashier
-    participant MobileApp as React Native (Local DB)
-    participant Printer as Bluetooth Printer
-    participant Server as FastAPI Backend
+    actor Cashier
+    participant POS as App (POS)
+    participant Out as Outbox
+    participant Printer as Printer
+    participant API as FastAPI
 
-    Cashier->>MobileApp: Adds items to cart
-    Cashier->>MobileApp: Taps "Pay via Cash"
-    
-    MobileApp->>MobileApp: Save Order (status: pending_sync)
-    MobileApp->>Printer: Send ESC/POS Byte Commands
-    Printer-->>Cashier: Prints Receipt
-    
-    Note over MobileApp, Server: Background Sync Process
-    
-    MobileApp->>Server: POST /sync/push (Pending Orders)
-    Server->>Server: Validate & Insert to Postgres
-    Server-->>MobileApp: 200 OK (Order ID: ord_123 saved)
-    MobileApp->>MobileApp: Update Order (status: synced)
+    Cashier->>POS: add items, Pay (cash)
+    POS->>API: POST /orders {id, items, payments}
+    alt online
+        API-->>POS: priced bill, invoice no., change
+    else network error
+        POS->>POS: previewTotals (same maths as the server)
+        POS->>Out: queue the request with its id
+    end
+    POS->>Printer: ESC/POS receipt (or print dialog)
+    Note over Out,API: later: POST /sync/push replays the same id once
 ```
+
+### Tests
+`backend/tests/integration/test_orders.py`, `test_sync.py`, `backend/tests/unit/test_pricing.py`, `frontend/src/lib/__tests__/gstin.test.ts`.

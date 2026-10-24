@@ -1,0 +1,36 @@
+%% 11 · Daily subscription check
+%% An asyncio task started in the API lifespan (no Celery, no cron container). It runs at 01:00 IST, takes a
+%% Redis lock so only one uvicorn worker / replica does the day's check, and catches up if the server was down.
+sequenceDiagram
+    autonumber
+    participant L as API lifespan
+    participant S as run_scheduler
+    participant R as Redis
+    participant DB as PostgreSQL (system session)
+    participant SS as services/sessions.py
+    participant D as Signed-in devices
+
+    L->>S: create_task (if JOB_SCHEDULER_ENABLED)
+    S->>DB: platform_settings: last run
+    alt last run before today's 01:00 IST
+        S->>S: catch-up run now
+    end
+    loop every day
+        S->>S: sleep until next 01:00 IST
+        S->>R: SET jobs:subscription_check:{date} NX EX 6h
+        alt key already set (another worker took it)
+            R-->>S: skip
+        else lock taken (or Redis down: run anyway, idempotent)
+            S->>DB: active tenant_configs
+            loop each business with paid_until + grace passed and lapsed_at empty
+                S->>DB: lapsed_at = now
+                S->>SS: sign_out_business(reason "Subscription ended")
+                SS->>DB: revoke user_sessions, bump session_version
+                SS->>R: session:revoked:{sid} keys
+                S->>DB: platform_audit_logs subscription.lapsed
+            end
+            S->>DB: save summary (locked now, renewals due soon)
+        end
+    end
+    D->>D: next request 401 (signed out), after sign-in 402 until renewal
+    Note over S,DB: also on demand: manage.py subscriptions:check<br/>or console "Run check now"

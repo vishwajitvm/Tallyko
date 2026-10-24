@@ -1,71 +1,45 @@
 # Logging & Observability
 
-## 1. Tracenest Mandate
+## 1. Tracenest mandate
 
-As per the hard constraints, **every service must use `tracenest`** (`https://pypi.org/project/tracenest/`) for logging. Standard `print()` statements or unformatted Python `logging` module usage is strictly prohibited in production code.
+Every backend log goes through `logging.getLogger("tallyko")` and is formatted as structured JSON by [`tracenest`](https://pypi.org/project/tracenest/). `print()` is not allowed in app code. Messages start with a `[Domain]` prefix (`[Billing]`, `[Auth]`, `[Email]`, `[Subscriptions]`, `[Integrations]`…) and pass the tenant: `logger.info("[Billing] …", extra={"tenant_id": tenant_id})`.
 
-Tracenest provides structured JSON logging, which is essential for searching and filtering logs in a multi-tenant environment where distinguishing between different vendors' requests is critical.
+## 2. What exists
 
-## 2. Integration Points
+### Request tracing (`app/main.py`, `TracingMiddleware`)
+- Takes `X-Trace-ID` from the request (the app may send one) or generates a UUID, stores it on `request.state`, and returns it in the `X-Trace-ID` response header.
+- Logs one line per request (method, path, status, duration), except `/health`.
+- Unhandled exceptions are logged with the stack trace at `ERROR` and answered with the standard envelope `{"success": false, "error": {"code": "INTERNAL_SERVER_ERROR", "message": …, "trace_id": …}}`, so no stack trace reaches the client.
+- Adds basic security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`); Caddy adds HSTS in production.
 
-### A. FastAPI Middleware Integration
-A custom middleware wraps every incoming HTTP request.
-*   **Request Start:** Generates a unique `trace_id`. Extracts `tenant_id` and `user_id` from the JWT token (if present).
-*   **Contextual Logging:** Binds these variables to the tracenest context. Any subsequent log emitted during that request lifecycle will automatically include the `trace_id`, `tenant_id`, and `user_id`.
-*   **Request End:** Logs the HTTP status code, request path, and execution duration.
+### Background tasks
+The email worker and the subscription scheduler run in the API process and log through the same logger (`[Email]`, `[Subscriptions]`), with `tenant_id` where one applies. There are no Celery/ARQ workers to propagate context to.
 
-### B. Background Worker Integration (Celery/ARQ)
-*   When the API queues a job, it passes the `trace_id` and `tenant_id` into the task arguments.
-*   The worker initializes tracenest with these context variables before executing the job, ensuring logs can be traced from the API request right through to the asynchronous background completion.
+### Where logs land
+| Where | What |
+|---|---|
+| `backend/TraceNestLogs/app.log` (dev bind mount) / volume `api_logs` (prod) | tracenest JSON lines (`LOG_DIR` overrides the folder) |
+| `docker compose logs backend` | uvicorn and Python logging on stdout; prod uses the `json-file` driver with rotation (10 MB × 5) |
+| tracenest UI router | mounted in non-production environments for browsing logs |
 
-### C. Error Handling
-Global exception handlers in FastAPI catch unhandled exceptions, log the stack trace via tracenest at the `ERROR` or `CRITICAL` level, and return a standardized JSON error response to the client.
+To follow one request, copy `X-Trace-ID` from the response (or from the error shown in the app) and search for it:
 
-## 3. Log Output and Aggregation
-
-### Where do the logs land?
-1.  **Application Output:** Tracenest is configured to output structured JSON strings to `stdout` and `stderr`.
-2.  **Docker Collection:** Docker's logging daemon captures this standard output.
-3.  **Log Aggregation (The Stack):**
-    *   In the Docker Compose stack, a log collection agent (e.g., **Promtail** or **Fluent Bit**) mounts the Docker socket or log directories.
-    *   It parses the JSON logs and forwards them to an open-source aggregator (e.g., **Grafana Loki**).
-    *   Developers use **Grafana** to visualize, query, and alert on these logs.
-
-## 4. Querying Logs (Example)
-
-Because logs are structured JSON via tracenest, developers investigating an issue for a specific vendor can write precise queries in Grafana Loki:
-
-```text
-{container="api"} | json | tenant_id="tnt_59482" level="error"
+```bash
+docker compose logs backend | grep <trace id>
+grep <trace id> backend/TraceNestLogs/app.log
 ```
-This instantly returns all errors experienced by that specific tenant, regardless of which API replica served the request.
 
-## 5. Observability Data Flow
+## 3. Flow
 
 ```mermaid
 flowchart LR
-    subgraph Application Tier
-        API[FastAPI Container]
-        Worker[Celery Container]
-    end
-
-    subgraph Log Collector
-        DockerLog[Docker stdout/stderr]
-        Promtail[FluentBit / Promtail]
-    end
-
-    subgraph Aggregation & UI
-        Loki[(Grafana Loki)]
-        Grafana[Grafana Dashboard]
-    end
-
-    API --"JSON (tracenest)"--> DockerLog
-    Worker --"JSON (tracenest)"--> DockerLog
-    
-    DockerLog --> Promtail
-    Promtail --> Loki
-    Loki --> Grafana
-    
-    style Application Tier fill:#f9f,stroke:#333
-    style Loki fill:#bbf,stroke:#333
+    app(["App request<br/>X-Trace-ID optional"]) --> mw["TracingMiddleware<br/>trace_id, timing, error envelope"]
+    mw --> code["Routers, services,<br/>email worker, scheduler<br/>logger 'tallyko' + extra tenant_id"]
+    code --> file[("TraceNestLogs/app.log<br/>JSON lines")]
+    code --> out["stdout -> docker logs<br/>(json-file, rotated)"]
+    file --> ui["tracenest UI<br/>(non-production)"]
 ```
+
+## 4. Not built
+
+No log shipping or dashboards exist: no Promtail/Fluent Bit, Grafana Loki, Grafana, metrics or alerting. If they are added later, they must be free and self-hosted, and can read the JSON file or the Docker logs above. Until then, `docker compose logs`, `app.log` and `GET /health` are the tools.

@@ -1,4 +1,2 @@
-# Windows script for running Alembic DB migrations inside Docker
-
-Write-Host "Running database migrations..." -ForegroundColor Green
-docker compose exec backend alembic upgrade head
+# Apply pending database migrations (they also run automatically when the backend starts)
+& (Join-Path $PSScriptRoot "db.ps1") migrate @args

@@ -1,0 +1,47 @@
+# Tallyko web server.
+# SITE_ADDRESS=":80" serves plain HTTP (local preview / behind another proxy).
+# SITE_ADDRESS="pos.yourshop.com" makes Caddy fetch a free Let's Encrypt certificate and serve HTTPS automatically.
+{
+	email {$ACME_EMAIL:admin@example.com}
+}
+
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	# Menu photos are up to 10 MB each, max 5 per upload
+	request_body {
+		max_size 60MB
+	}
+
+	@api path /api/* /health
+	handle @api {
+		reverse_proxy {$BACKEND_UPSTREAM:backend:8000} {
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+
+	handle {
+		root * /srv
+		# Hashed bundles can be cached forever; HTML must always be revalidated
+		@assets path /_expo/static/* /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@html path / /index.html
+		header @html Cache-Control "no-cache"
+		header /sw.js Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options SAMEORIGIN
+		Permissions-Policy "camera=(self), bluetooth=(self), microphone=(), geolocation=()"
+		-Server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

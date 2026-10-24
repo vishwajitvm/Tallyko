@@ -1,150 +1,96 @@
-# Infrastructure Usage Guide: Databases, Caches, & File Storage
+# Infrastructure Usage Guide: PostgreSQL and Redis
 
-This document provides a layman-friendly, detailed breakdown of the three main infrastructure components powering Tallyko: **PostgreSQL**, **Redis**, and **MinIO**. It explains what they are, why they are used, how to access them, and provides real-world examples of how data flows through them during everyday use.
+Tallyko's server keeps its data in two places: **PostgreSQL** (everything permanent) and **Redis** (short-lived, fast-changing data). This guide explains both in plain words, how to look inside them in development, and how they work together in everyday situations.
+
+There is **no file storage** (MinIO/S3 is not used): menu photos are read in memory and thrown away, receipts are printed or rendered on the device, and nothing else needs files.
 
 ---
 
-## 1. PostgreSQL (The Relational Database)
+## 1. PostgreSQL (the permanent records)
 
 ### What is it?
-PostgreSQL (often called Postgres) is like a giant, highly organized digital filing cabinet. It uses tables (rows and columns) to store structured data. It is known for being incredibly strict about rules, ensuring data is never lost or corrupted (a concept called ACID compliance).
+A relational database: tables of rows and columns with strict rules, so a half-finished change never gets saved (transactions).
 
-### Why do we use it in Tallyko?
-We use Postgres to store everything that needs permanent, structured relationships. For example: User accounts, Restaurant Tables, Products, Prices, and Orders. Because Tallyko is a multi-tenant system (meaning many different restaurants use the same app), Postgres allows us to securely separate one restaurant's data from another using Row-Level Security (RLS).
+### What Tallyko keeps there
+Every business's menu, tables, bills, payments, stock movements, customers, staff, settings and audit log, plus platform data (businesses, plans, subscriptions, logins, devices). One shared database holds every business; Row-Level Security makes sure a business's session only sees its own rows ([03](./03_Multi_Vendor_Architecture.md)). Table list: [04_Data_Model.md](./04_Data_Model.md).
 
-### Credentials
-*   **Host:** `localhost` (if using a UI tool) or `db` (if inside Docker)
-*   **Port:** `5432`
-*   **Database Name:** `tallyko_shared`
-*   **Username:** `postgres`
-*   **Password:** `password_to_change_in_prod`
+### Development connection
+| Setting | Value |
+|---|---|
+| Host / port (from your PC) | `localhost` / `5433` (bound to 127.0.0.1 only) |
+| Host / port (inside Docker) | `db` / `5432` |
+| Database | `tallyko_shared` (tests use `tallyko_shared_test`) |
+| User / password | `postgres` / `password_to_change_in_prod` (dev default; production refuses it) |
 
-### How to Access it
-**Command Line (CMD):**
-To jump directly into the database terminal via Docker, run this in your command prompt:
+### How to look inside
 ```bash
-docker exec -it tallyko-db psql -U postgres -d tallyko_shared
+docker compose exec db psql -U postgres -d tallyko_shared
 ```
-*(Type `\dt` to list tables, or `SELECT * FROM users;` to view users. Type `\q` to exit).*
+`\dt` lists tables, `SELECT code, status, total_amount FROM orders LIMIT 5;` shows bills, `\q` exits.
 
-**User Interface (UI):**
-Command lines can be scary. To view your tables visually like an Excel spreadsheet:
-1. Download **[DBeaver Community Edition](https://dbeaver.io/download/)** or **pgAdmin**.
-2. Open the app and click "New Connection" -> Select "PostgreSQL".
-3. Enter the Host (`localhost`), Port (`5432`), Database (`tallyko_shared`), Username, and Password from above.
-4. Click "Test Connection" and then "Finish". You can now double-click tables to view the data!
+With a UI: **DBeaver Community** or **pgAdmin** → new PostgreSQL connection → host `localhost`, port `5433`, database `tallyko_shared`, user and password as above.
+
+As the superuser you see every business's rows. To see what the app sees, switch to its role inside a transaction:
+```sql
+BEGIN;
+SET LOCAL ROLE tallyko_app;
+SELECT set_config('app.current_tenant_id', '<tenant uuid>', true);
+SELECT count(*) FROM orders;   -- only that business
+ROLLBACK;
+```
 
 ---
 
-## 2. Redis (The High-Speed Memory)
+## 2. Redis (the fast sticky notes)
 
 ### What is it?
-If Postgres is a filing cabinet, Redis is the sticky note on your computer monitor. It doesn't save data permanently to a hard drive; instead, it stores data in your computer's RAM (Random Access Memory). This makes reading and writing to Redis lightning-fast.
+An in-memory key/value store. Very fast; Tallyko never keeps anything there that can't be rebuilt, and the API **keeps working if Redis is down** (it falls back to Postgres or skips the check).
 
-### Why do we use it in Tallyko?
-Because reading from a hard drive (Postgres) takes time, we use Redis to hold temporary information that needs to be accessed instantly:
-1.  **Rate Limiting:** Stopping hackers from guessing passwords too fast.
-2.  **Caching:** Remembering the restaurant menu so we don't have to ask Postgres for it every single time a customer scans a QR code.
-3.  **Background Tasks:** Acting as a waiting room for heavy tasks (like generating PDF reports) so the main app doesn't freeze.
+### What Tallyko keeps there
+| Key pattern | Purpose | Lifetime |
+|---|---|---|
+| tenant config cache | status, `paid_until`, `session_version`, `db_url` per business | 10 minutes, dropped on change |
+| rate-limit windows | login per account, public orders per customer phone, webhooks per business, per-IP ceilings | the window (1–15 min) |
+| `session:revoked:{sid}` | devices that were signed out | until their tokens would expire |
+| `jobs:subscription_check:{date}` | lock so one worker runs the 01:00 IST check | 6 hours |
+| `public-add:{tenant}:{id}` | makes "add to my bill" from a QR page safe to retry | 24 hours |
 
-### Credentials
-*   **Host:** `localhost` (or `cache` in Docker)
-*   **Port:** `6379`
-*   **Password:** *(None set for local development)*
+Tests use Redis database 1, development uses database 0.
 
-### How to Access it
-**Command Line (CMD):**
+### How to look inside
 ```bash
-docker exec -it tallyko-cache redis-cli
+docker compose exec cache redis-cli
 ```
-*(Type `KEYS *` to see all saved sticky notes. Type `GET some_key` to read one. Type `exit` to leave).*
-
-**User Interface (UI):**
-1. Download **[RedisInsight](https://redis.com/redis-enterprise/redis-insight/)**.
-2. Click "Add Redis Database".
-3. Enter Host (`localhost`) and Port (`6379`).
-4. Connect. You will see a list of all temporary keys (like active rate limits) currently in memory.
+`KEYS *` (fine on a dev machine), `TTL <key>`, `exit`. With a UI: **RedisInsight** → add database → the cache is not published to your PC by default, so use `redis-cli` above.
 
 ---
 
-## 3. MinIO (The File Storage Cabinet)
+## 3. How they work together: everyday examples
 
-### What is it?
-MinIO is essentially your own private version of Amazon S3 or Google Drive. Instead of storing structured text (like Postgres) or temporary counters (like Redis), MinIO stores heavy files.
+### Example 1: someone guesses an owner's password
+1. Each `/auth/login` request increments two Redis counters: one for the IP (60/min, high because a whole shop shares one IP) and one for the account (20 per 15 minutes in production).
+2. On the 21st try for that account, the API answers **429** without touching Postgres.
+3. Staff at other tills logging in to their own accounts are not affected.
 
-### Why do we use it in Tallyko?
-We use MinIO to hold binary files. For example: Profile pictures, photos of menu items, AI-uploaded photos of physical menus, and generated PDF receipts. Storing these directly in Postgres would make the database incredibly bloated and slow.
+### Example 2: a cashier completes a bill
+1. The app sends product ids and quantities only.
+2. In one Postgres transaction (as `tallyko_app`, tenant set): the server prices the bill, saves the order, lines and payment, assigns the invoice number from `tenant_counters`, writes stock movements to `inventory_logs`, updates loyalty, and queues any customer email in `email_logs`.
+3. If any step fails, nothing is saved.
 
-### Credentials
-*   **Host (API):** `localhost:9000`
-*   **Host (Web UI):** `http://localhost:9001`
-*   **Username:** `minio_admin`
-*   **Password:** `minio_password_to_change`
+### Example 3: fifty customers scan the table QR at lunch
+1. Each phone calls `GET /public/{tenant}/menu?channel=QR`. The per-IP limit is 600/min because they all share the restaurant's Wi-Fi.
+2. Menu rows come from Postgres; the business's status comes from the Redis tenant cache.
+3. Orders are limited per customer phone, not per IP.
 
-### How to Access it
-**User Interface (UI):**
-MinIO comes with a built-in website! You don't need to download an extra app.
-1. Open your web browser and go to: `http://localhost:9001`
-2. Log in with the username and password above.
-3. You will see an interface that looks like Google Drive. Here you can create "Buckets" (folders) and upload/download files manually.
+### Example 4: the owner signs out a lost phone
+1. The session row in Postgres gets `revoked_at`, and `session:revoked:{sid}` is written to Redis.
+2. The lost phone's next request is checked against Redis → **401**, and its refresh token is refused by Postgres.
 
----
+### Example 5: the daily subscription check at 01:00 IST
+1. Each uvicorn worker wakes up; the first to set `jobs:subscription_check:{date}` in Redis does the work.
+2. It finds businesses whose `paid_until` + grace has passed in Postgres, signs out every device (sessions revoked, `session_version` bumped, Redis cache dropped) and writes the platform audit log.
 
-## 4. How It All Connects: Real-World Flow Examples
-
-To understand how these three tools work together, let's look at 6 everyday scenarios in Tallyko:
-
-### Example 1: Brute-Force Password Protection (Flow: Redis)
-**Scenario:** A hacker tries to guess an owner's password by logging in 100 times in one minute.
-**The Flow:**
-1. The hacker sends the first login request to `/auth/login`.
-2. Tallyko asks **Redis**: "How many times has this IP address tried to log in this minute?"
-3. Redis says "0". Tallyko tells Redis to increment the counter to 1, then checks the password in **Postgres**.
-4. The hacker sends requests 2 through 10. Redis increments the counter to 10.
-5. On the 11th request, Redis says "This IP has hit the limit of 10!"
-6. Tallyko immediately blocks the hacker with a `429 Too Many Requests` error, completely protecting Postgres from being overloaded.
-
-### Example 2: Uploading an Image for AI OCR (Flow: MinIO -> Backend -> Postgres)
-**Scenario:** A restaurant owner takes a photo of their physical menu to let the AI auto-generate their digital catalog.
-**The Flow:**
-1. The Mobile App sends the `.jpg` image to the backend.
-2. The backend immediately saves the heavy `.jpg` file into **MinIO**, freeing up memory.
-3. The backend runs the Tesseract OCR engine on the image to extract the text.
-4. The backend converts the text into structured products (e.g., "Burger - $5").
-5. The backend saves these structured products permanently into **Postgres**.
-
-### Example 3: Customer Scans a QR Menu (Flow: Redis Cache)
-**Scenario:** 50 customers sit down at once during the lunch rush and scan the QR code to see the menu.
-**The Flow:**
-1. Customer 1 scans the code. Tallyko checks **Redis** for the menu. Redis is empty.
-2. Tallyko queries **Postgres** (which takes 50 milliseconds), gets the menu, sends it to Customer 1, and saves a copy in **Redis** for 5 minutes.
-3. Customers 2 through 50 scan the code.
-4. Tallyko checks **Redis**. Redis has the menu! It returns the menu instantly (in 1 millisecond). **Postgres** doesn't have to do any work, keeping the server lightning fast.
-
-### Example 4: A Cashier Completes an Order (Flow: Postgres Transactions)
-**Scenario:** A cashier taps "Pay $20" for a Burger and Fries.
-**The Flow:**
-1. The app sends the final order data to the backend.
-2. Tallyko opens a "Transaction" in **Postgres**. A transaction means "Do all of these steps, or cancel them all if one fails."
-3. Postgres saves the Order record.
-4. Postgres checks the Inventory table and deducts 1 bun and 1 box of fries.
-5. If the inventory was successfully deducted, Postgres permanently saves (commits) the transaction. The order is secure.
-
-### Example 5: Running an End-of-Month Analytics Report (Flow: Redis Queue -> Postgres -> MinIO)
-**Scenario:** The restaurant owner clicks "Generate Monthly Sales PDF." Generating this PDF takes 30 seconds. If the backend waited, the owner's app would freeze.
-**The Flow:**
-1. Tallyko receives the request and drops a sticky note in **Redis**: *"Hey, please make a report for User X when you have time."* It instantly tells the owner "Report is generating!"
-2. A separate background worker sees the note in Redis and picks up the job.
-3. The worker spends 10 seconds querying thousands of rows in **Postgres** to calculate the math.
-4. The worker spends 20 seconds drawing the PDF file.
-5. The worker saves the final `.pdf` to **MinIO**.
-6. The worker sends a notification to the owner's app: "Your report is ready to download!"
-
-### Example 6: Generating a JWT Auth Token (Flow: Postgres -> Frontend)
-**Scenario:** A manager logs in successfully.
-**The Flow:**
-1. Tallyko verifies the password in **Postgres**.
-2. Instead of storing the "Logged In" status in Postgres, Tallyko generates a cryptographically signed JWT (JSON Web Token) containing the user's role ("Manager") and Tenant ID.
-3. The token is sent back to the Mobile App.
-4. The Mobile App saves this token deep inside the phone's hardware security chip using **Expo SecureStore**.
-5. For all future requests, the app sends this token. Tallyko verifies the mathematical signature without ever needing to ask Postgres if the user is logged in, saving massive amounts of time.
+### Example 6: a customer email
+1. Completing a bill writes an `email_logs` row with status `queued` (or `skipped` when SMTP isn't configured).
+2. The email worker in the API picks it up within 5 s (`FOR UPDATE SKIP LOCKED`), sends it over SMTP (Mailpit in dev) and marks it `sent`.
+No Redis queue or worker container is involved.

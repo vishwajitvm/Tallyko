@@ -1,0 +1,37 @@
+%% 05 · Pricing pipeline
+%% The server prices every bill; clients send product / variant ids and quantities only.
+%% Same maths in frontend/src/lib/billing.ts for the offline preview.
+flowchart TB
+    in(["Client sends: product_id, variant_id,<br/>quantity, channel, order type,<br/>offer_id / code, discount"])
+
+    subgraph Line["Per line"]
+        direction TB
+        ch["1 · Channel price<br/>channel_menu.unit_price: own channel price,<br/>else base + variant modifier + channel mark-up %<br/>(rounded to the rupee); hidden item = refused"]
+        tx["2 · GST class in effect at that time<br/>TaxResolver: product class, else business default,<br/>rate row with latest effective_from"]
+    end
+
+    subgraph Gst["GST only with a valid GSTIN"]
+        direction TB
+        reg{"gst_registration = regular<br/>and GSTIN valid (mod-36)?"}
+        inv["Tax Invoice<br/>CGST + SGST (intra) or IGST (inter)"]
+        bos["Bill of Supply<br/>0% GST (composition, unregistered,<br/>or GSTIN missing)"]
+        reg -- "yes" --> inv
+        reg -- "no" --> bos
+    end
+
+    subgraph Bill["Whole bill"]
+        direction TB
+        off["3 · Offer (services/offers.py, pure)<br/>schedule, channel, minimum, loyalty visits, caps<br/>-> line discounts or a free Rs 0 line"]
+        disc["4 · Manual discount (flat or %)<br/>+ loyalty points redeemed"]
+        gst["5 · GST on the discounted value<br/>prices incl. or excl. tax"]
+        rnd["6 · Round off to the rupee"]
+        off --> disc --> gst --> rnd
+    end
+
+    snap[("Saved on order_items:<br/>unit_price, tax_rate, tax_components,<br/>hsn_sac, subtotal (snapshot)<br/>orders: subtotal, discount, tax,<br/>round_off, total, bill_type")]
+
+    in --> ch --> tx --> reg
+    inv --> off
+    bos --> off
+    rnd --> snap
+    snap --> pay["On full payment: invoice no. per financial year,<br/>stock deduction, loyalty points, offer redemption,<br/>customer e-receipt / reward emails"]

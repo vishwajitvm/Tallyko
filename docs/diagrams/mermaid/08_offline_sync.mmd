@@ -1,0 +1,45 @@
+%% 08 · Offline sync
+%% Bills made without a connection go to the device outbox with a client-generated order id and are replayed
+%% through POST /sync/push. The id is an idempotency key, so a bill reaches the server exactly once.
+sequenceDiagram
+    autonumber
+    actor Cashier
+    participant POS as POS screen
+    participant Cache as store/data (offline cache)
+    participant Out as store/outbox
+    participant Sync as lib/sync.ts
+    participant API as FastAPI /api/v1/sync
+    participant DB as PostgreSQL
+
+    Sync->>API: POST /sync/pull {since}
+    API-->>Sync: changed menu, tables, settings, tax classes + server_time
+    Sync->>Cache: merge and store server_time
+
+    Cashier->>POS: add items, Pay
+    POS->>Cache: read menu, prices, tax classes
+    POS->>API: POST /orders {id: client UUID, items, payments}
+    API--xPOS: network error / timeout
+    POS->>POS: previewTotals (same GST maths as the server)
+    POS->>Out: save full order request with id and real created_at
+    POS-->>Cashier: receipt printed, short code until invoice no.
+
+    Note over Sync: runs on sign-in, every 60 s, when the<br/>connection returns and when the app is foregrounded
+    Sync->>API: POST /sync/push {orders: [...]}
+    loop each order, own savepoint
+        API->>DB: order id already exists?
+        alt already stored (reply was lost earlier)
+            DB-->>API: existing order
+            API-->>Sync: ok (same order, no duplicate)
+        else new
+            API->>DB: price on the server, create order<br/>(table got another bill meanwhile: separate bill)
+            API-->>Sync: ok
+        end
+    end
+    Sync->>Out: remove ok bills
+    alt 4xx for one bill (e.g. item removed)
+        Sync->>Out: keep it, show in Orders - Offline bills (Retry / Discard)
+    else 5xx, 401, 408, 429
+        Sync->>Out: keep and retry later
+    else 402 subscription locked
+        Sync->>Out: pause pushing, keep every bill until renewal
+    end

@@ -1,68 +1,93 @@
 # Multi-Vendor Architecture
 
-## 1. Overview and Differentiator
+## 1. Overview
 
-Shopto and most legacy POS systems are designed as single-tenant applications (one installation = one business). Tallyko fundamentally differentiates itself by being a **true Multi-Tenant SaaS**. 
+Most POS systems are one installation per business. Tallyko is a **multi-tenant SaaS**: one server serves many independent businesses (tenants), keeps their data strictly apart, and is updated once for everyone. The design also allows a tenant to live in its own database.
 
-This architecture allows a single Tallyko instance to serve thousands of independent businesses (vendors), while ensuring strict data isolation, simplified centralized updates, and the flexibility to offer enterprise vendors their own dedicated database instances.
+## 2. Core concepts
 
-## 2. Core Concepts
+- **Platform (global) tables** hold data that is not owned by one business: `global_vendors` (the business; its `id` is the `tenant_id`), `tenant_configs` (status, plan, overrides, `paid_until`, `session_version`, optional `db_url`), `global_users` (logins), `user_sessions` (devices), plans and subscriptions, and console data. They have no RLS and are read through **system sessions**.
+- **Business (tenant) tables** hold everything a shop owns: menu, orders, customers, staff, settings… Each has a `tenant_id` column (or follows a parent row that has one) and a Postgres **Row-Level Security** policy.
+- **Shared database (default):** every tenant lives in one database (`tallyko_shared` in development, `POSTGRES_DB` in production).
+- **Dedicated database (routing only):** if `tenant_configs.db_url` is set, that tenant's sessions use a separate engine. **There is no provisioning or per-tenant migration loop yet** (known gap), so no tenant uses this today.
 
-*   **Global Database (Directory):** A master database containing non-tenant-specific data, such as:
-    *   Vendor Registrations & Subscriptions (The immutable plan contracts).
-    *   Global Users (authentication credentials).
-    *   Tenant Routing Table (mapping a `tenant_id` to their specific database connection string).
-*   **Shared Tenant Database (Default):** The vast majority of vendors will live here. Data is isolated at the row level. Every table (e.g., `products`, `orders`) has a `tenant_id` column.
-*   **Dedicated Tenant Database (Opt-In):** For enterprise clients, Tallyko supports pointing their `tenant_id` to a completely separate PostgreSQL instance (even hosted on their own infrastructure).
+See the tables in [04_Data_Model.md](./04_Data_Model.md).
 
-## 3. Database Routing Pattern
+## 3. How a request gets a tenant session
 
-When a request arrives at the FastAPI backend, the routing logic works as follows:
+1. The client sends a JWT whose `tenant_id`, `role`, `staff_id`, `sid` (session id) and `sv` (session version) were set at login.
+2. `get_current_user` loads the tenant config (Redis cache, 10 minutes; `drop_tenant_cache()` after any change) and refuses signed-out tokens (401) and locked subscriptions (402).
+3. `get_tenant_db` (or `get_public_tenant_db` for public routes, using the `tenant_id` in the path) refuses suspended businesses (403), picks the shared or dedicated engine, and at the start of **every transaction** runs:
+   ```sql
+   SET LOCAL ROLE tallyko_app;
+   SELECT set_config('app.current_tenant_id', '<tenant id>', true);
+   ```
+4. RLS policies (`tenant_isolation`) only show rows of that tenant. Child tables (`order_items`, `payments`, `product_variants`, `tax_class_rates`) are visible when their parent row is.
+5. Application code still filters by `tenant_id` and checks that every id from the request (product, table, customer, order…) belongs to the tenant, because foreign-key checks bypass RLS.
 
-1.  **Identification:** The user authenticates (e.g., via JWT). The token contains their `tenant_id`.
-2.  **Lookup:** A middleware intercepts the request, checks the `tenant_id`, and queries the in-memory cache (Redis) or Global Database for the tenant's connection configuration.
-3.  **Connection Injection:** 
-    *   If the tenant is on the **Shared DB**, the session is configured to append `WHERE tenant_id = X` to all queries (enforced via SQLAlchemy or PostgreSQL RLS).
-    *   If the tenant is on a **Dedicated DB**, a specific SQLAlchemy engine/session is instantiated for that target connection string.
-4.  **Execution:** The API logic executes without needing to know *where* the data is actually stored.
-
-## 4. PostgreSQL Row-Level Security (RLS)
-
-To prevent catastrophic data leaks in the shared database (e.g., Vendor A seeing Vendor B's sales), we rely on PostgreSQL's native Row-Level Security.
-
-*   A Postgres role is configured for the application.
-*   Before executing queries in a shared session, the application executes `SET LOCAL app.current_tenant_id = 'X'`.
-*   RLS policies on tables automatically filter out any rows where `tenant_id != current_tenant_id`. This makes multi-tenancy foolproof at the database layer.
-
-## 5. Sequence Diagram: Tenant Resolution
-
+<!-- diagram: 20_tenant_isolation drawio=Tallyko_Access_And_Sessions -->
 ```mermaid
-sequenceDiagram
-    participant App as Mobile App
-    participant API as FastAPI Middleware
-    participant Global as Global DB / Redis
-    participant Shared as Shared Tenant DB
-    participant Ded as Dedicated Tenant DB
+flowchart TB
+    req(["Business request<br/>Bearer JWT: sub, tenant_id, role, sid, sv"])
+    pub(["Public request<br/>/public/{tenant_id}/..."])
 
-    App->>API: GET /api/v1/products (JWT: tenant=101)
-    API->>Global: Lookup Connection for Tenant 101
-    
-    alt is Shared DB
-        Global-->>API: Type: Shared
-        API->>Shared: SET LOCAL tenant=101; SELECT * FROM products;
-        Shared-->>API: [Products for 101]
-    else is Dedicated DB
-        App->>API: GET /api/v1/products (JWT: tenant=999)
-        API->>Global: Lookup Connection for Tenant 999
-        Global-->>API: Type: Dedicated, URI: postgres://...
-        API->>Ded: SELECT * FROM products;
-        Ded-->>API: [Products for 999]
+    subgraph Checks["get_current_user + open_tenant_session"]
+        direction TB
+        dec["Decode PyJWT access token"]
+        cfg["get_tenant_config(tenant_id)<br/>Redis cache 10 min, else tenant_configs"]
+        st{"status active?<br/>not locked?"}
     end
-    
-    API-->>App: 200 OK (JSON)
+
+    subgraph Session["get_tenant_db / get_public_tenant_db"]
+        direction TB
+        route{"tenant_configs.db_url?"}
+        shared["Shared engine<br/>tallyko_shared"]
+        ded["Dedicated engine<br/>(routing only, no provisioning yet)"]
+        begin["On every transaction begin:<br/>SET LOCAL ROLE tallyko_app<br/>set_config('app.current_tenant_id', id, true)"]
+    end
+
+    subgraph PG["PostgreSQL"]
+        direction TB
+        rls["RLS policy tenant_isolation<br/>tenant_id = current_setting(...)<br/>child tables: visible when parent row is"]
+        grants["Role tallyko_app: no DELETE on orders, payments,<br/>kots, customers, products, categories,<br/>inventory_logs, tables. audit_logs and<br/>product_versions append-only (0059)"]
+    end
+
+    subgraph System["System sessions - bypass RLS (RLS not FORCEd)"]
+        direction TB
+        sys["get_shared_session_maker()<br/>connects as the DATABASE_URL login"]
+        uses["auth and routing, staff management,<br/>platform console, records_admin,<br/>email worker, daily subscription check"]
+    end
+
+    req --> dec --> cfg --> st
+    pub --> cfg
+    st -- "suspended: 403<br/>locked: 402" --> stop(["Request refused"])
+    st -- "ok" --> route
+    route -- "null" --> shared --> begin
+    route -- "set" --> ded --> begin
+    begin --> rls --> grants
+    app["App code still filters tenant_id<br/>and checks every id from the request"] -.-> rls
+    uses --> sys --> PG
 ```
 
-## 6. Onboarding Process
+*Diagram source: [`20_tenant_isolation.mmd`](diagrams/mermaid/20_tenant_isolation.mmd) · [SVG](diagrams/rendered/20_tenant_isolation.svg) · draw.io: [`Tallyko_Access_And_Sessions.drawio`](diagrams/Tallyko_Access_And_Sessions.drawio)*
+<!-- /diagram -->
 
-1.  **Standard Onboarding (Shared):** Vendor signs up. A `tenant_id` is created in the Global DB and mapped to the Shared DB pool. Instant provisioning.
-2.  **Enterprise Onboarding (Dedicated):** DevOps provisions a new Postgres container/server. The connection string is added to the Global DB's routing table for that specific `tenant_id`. Migrations are run against the new instance. The application immediately begins routing their traffic to the new DB.
+## 4. What the database role enforces
+
+`tallyko_app` is a non-superuser role created by the RLS migrations (`backend/app/db/rls.py`):
+
+- RLS applies to it on every tenant table.
+- Migration `0059` removes DELETE on `orders`, `payments`, `kots`, `customers`, `products`, `product_categories`, `inventory_logs` and `tables`, and makes `audit_logs` and `product_versions` append-only (no UPDATE or DELETE). A business can never erase its records; see [019](./features/019_Owner_Watch_No_Deletes_And_Menu_History.md).
+- RLS is **not FORCEd**, so system sessions (`get_shared_session_maker()`, connecting as the `DATABASE_URL` login) bypass it. They are used only for auth and routing, staff management, the platform console, `records_admin`, the email worker and the daily subscription check.
+
+New tenant tables are marked `TENANT_RLS` or `child_rls(...)` in the model; the generated migration then adds the GRANTs and policy automatically ([19](./19_Database_Migrations.md)).
+
+## 5. Onboarding
+
+- **Self sign-up:** `POST /auth/register` creates the global user, `global_vendors` + `tenant_configs`, business settings, the default location, roles, sales channels and tax classes, and starts the free demo. Instant.
+- **Onboarded by Tallyko:** the super admin creates the business in the console; the owner gets a temporary password.
+- **Dedicated database (future):** provision a Postgres instance, run migrations against it, set `tenant_configs.db_url`, call `drop_tenant_cache()`. The migration loop over dedicated databases is not written yet.
+
+## 6. Tests
+
+`backend/tests/integration/test_tenant_isolation.py` calls every route in `PROTECTED_ROUTES` with a token from tenant B against tenant A's ids and expects nothing to leak. Add new protected routes to that list.

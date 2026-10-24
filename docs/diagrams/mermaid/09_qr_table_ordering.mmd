@@ -1,0 +1,52 @@
+%% 09 · QR table ordering
+%% Customer scans the table QR, orders onto their own bill (matched by phone), staff accept, kitchen cooks,
+%% customer pays at the counter or by UPI deep link + "I've paid" claim, staff confirm. No payment gateway.
+sequenceDiagram
+    autonumber
+    actor G as Customer (phone browser)
+    participant P as /store/{tenantId}?table={id}
+    participant API as FastAPI /public (no login)
+    participant S as Staff app (Online orders / Tables)
+    participant K as Kitchen display
+    participant U as Customer's UPI app
+
+    G->>P: scan table QR
+    P->>API: GET /public/{tenant}/menu?channel=QR
+    API-->>P: QR-channel menu and prices, payment options
+    G->>P: name, phone, items, pay at counter or UPI
+    P->>API: POST /public/{tenant}/orders {table_id, phone, items, payment}
+    Note over API: rate limit per customer phone,<br/>high per-IP ceiling (shop Wi-Fi)
+    alt this phone already has an open bill on the table
+        API->>API: add items to that bill (new KOT)<br/>Redis key makes a retry safe
+    else first order
+        API->>API: new bill on the table, label = first name
+    end
+    API-->>P: bill (status placed, or open if auto-accept)
+
+    loop app polls every 5 s
+        S->>API: GET /orders (placed)
+    end
+    S->>API: POST /orders/{id}/accept
+    API-->>K: KOT appears (kitchen polls every 5 s)
+    K->>API: items preparing, ready, served
+    P->>API: GET /public/{tenant}/orders/{id} (track)
+    API-->>P: per-item status, balance due, upi_link
+
+    alt pay at the counter
+        G->>S: pays cash / card
+        S->>API: POST /orders/{id}/pay
+    else pay by UPI
+        P->>U: upi://pay (shop UPI id, amount, bill code)<br/>QR shown on a computer
+        U-->>G: paid in UPI app
+        G->>P: I've paid (optional UTR)
+        P->>API: POST /public/{tenant}/orders/{id}/payment-claim
+        API-->>S: "Customer says paid Rs X by UPI"
+        S->>S: check own UPI app
+        alt money received
+            S->>API: POST /orders/{id}/payment-claim/confirm
+            API->>API: record UPI payment, bill completed
+        else not received
+            S->>API: POST /orders/{id}/payment-claim/reject
+            API-->>P: claim cleared, pay again or at the counter
+        end
+    end

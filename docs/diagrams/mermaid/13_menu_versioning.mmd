@@ -1,0 +1,26 @@
+%% 13 · Menu versioning
+%% Every change to a menu item (single edit, bulk edit, import, hide, restore) appends a product_versions row.
+%% The table is append-only for the app role; old bills keep their own price snapshot on order_items.
+flowchart LR
+    subgraph Changes["What changes an item"]
+        direction TB
+        e1["Edit item<br/>PUT /catalog/products/{id}"]
+        e2["Bulk edit<br/>POST /catalog/products/bulk"]
+        e3["Create / menu import<br/>POST /catalog/products, /bulk-import"]
+        e4["Remove from menu<br/>DELETE -> is_active false"]
+        e5["Restore version N<br/>POST /catalog/products/{id}/history/{N}/restore"]
+    end
+
+    base["ensure_baseline<br/>first change of an older item saves<br/>its current state as version 1"]
+    upd["Update products row<br/>(+ variants, channel prices, tax class)"]
+    rec["menu_history.record<br/>snapshot + describe(previous, current)<br/>skipped if nothing changed"]
+    ver[("product_versions<br/>version N+1, snapshot, change text<br/>e.g. 'Price Rs 300 -> Rs 340',<br/>changed_by_name, created_at")]
+    aud["audit_logs menu.change<br/>(owner's watch)"]
+    hist["GET /catalog/products/{id}/history<br/>who changed what, when"]
+    bills["Old bills unchanged:<br/>order_items keep name, price, tax snapshot"]
+
+    Changes --> base --> upd --> rec --> ver
+    rec --> aud
+    ver --> hist
+    ver -. "restore copies an old snapshot back,<br/>itself a new version" .-> e5
+    upd -.-> bills

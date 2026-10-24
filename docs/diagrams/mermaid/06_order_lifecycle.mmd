@@ -1,0 +1,35 @@
+%% 06 · Order (bill) lifecycle
+%% orders.status: placed -> open -> completed | cancelled | merged. Archived is a flag (archived_at) set only by
+%% the Tallyko super admin. A business never deletes a bill.
+stateDiagram-v2
+    [*] --> placed : QR / online store / webhook<br/>(channel not auto-accept)
+    [*] --> open : POS, waiter, aggregator entered by staff,<br/>auto-accept channel, offline replay
+
+    placed --> open : staff accept (KOT created)
+    placed --> cancelled : staff reject
+    placed --> completed : paid in full (accepted on payment)
+
+    open --> open : add items (new KOT), void, comp,<br/>move items, transfer table, payment claim
+    open --> completed : paid in full (invoice no., stock,<br/>loyalty, offer redemption, emails)
+    open --> cancelled : cancel with reason
+    open --> merged : merged into another bill
+
+    completed --> cancelled : cancel (stock, loyalty and<br/>offer usage reversed)
+
+    state "archived (archived_at set)" as archived
+    completed --> archived : super admin, on owner's request
+    cancelled --> archived : super admin
+    merged --> archived : super admin
+
+
+    note right of merged
+        Not a sale and not a cancellation.
+        Kept for the owner's records.
+    end note
+    note right of archived
+        Hidden from lists and reports.
+        A running bill is cancelled first.
+        Unarchive clears the flag again.
+        Hard delete is a separate super admin
+        action with reversal and an audit snapshot.
+    end note

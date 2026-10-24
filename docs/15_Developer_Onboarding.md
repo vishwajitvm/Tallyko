@@ -1,69 +1,76 @@
 # 15. Developer Onboarding & Local Setup
 
-Welcome to the Tallyko codebase! This guide is designed to help you get the entire application running locally on your computer in minutes. We will cover how to use Docker to run the backend and the Web UI, and how to use Android Studio if you want to preview the actual mobile app.
+Everything runs in Docker — you only need **Docker Desktop** (Windows/macOS) or Docker Engine (Linux) and Git.
 
----
+## 1. Start the stack
 
-## 1. The "Magic" of Docker (Layman's Explanation)
-Think of Docker like a series of tiny, self-contained computers running inside your actual computer. We use Docker so that you don't have to install Python, PostgreSQL databases, or messy server tools directly onto your Windows machine. 
-If you run our Docker commands, it will automatically spin up the Database, the Backend API, and the Web UI.
+```bash
+docker compose up -d --build                         # first run takes a few minutes
+docker compose exec backend python manage.py seed    # demo data (refuses to run in production)
+```
 
-### Key Docker Commands
-Open your terminal (e.g., PowerShell) and navigate to the `Tallyko` folder.
+| Service | Where | Notes |
+|---|---|---|
+| Web app | http://localhost:8081 | Expo dev server (web) |
+| API + Swagger | http://localhost:8000/docs | runs `manage.py migrate` on start and `watch` in the background |
+| Mailpit (dev inbox) | http://localhost:8025 | every email the app sends in development lands here |
+| PostgreSQL | `127.0.0.1:5433` (user `postgres`, db `tallyko_shared`) | bound to localhost only |
+| Production preview | `docker compose --profile preview up -d --build` → http://localhost:8080 | Caddy + static build, same as a real server |
 
-- **Start Everything:**
-  ```bash
-  docker compose up --build
-  ```
-  *(This builds the code and starts the database, backend, and frontend. Leave this terminal open!)*
+How the pieces fit: [18_deployment diagram](./diagrams/mermaid/18_deployment.mmd), [02_System_Architecture.md](./02_System_Architecture.md).
 
-- **Stop Everything:**
-  ```bash
-  docker compose down
-  ```
-  *(Run this when you are done working for the day).*
+## 2. Demo logins
 
-- **View Logs for a specific service (like the backend):**
-  ```bash
-  docker compose logs backend --tail 50
-  ```
+The sign-in screen has a demo dropdown in development. Every demo account uses the password **`Demo@1234`**.
 
----
+| Account | What it is |
+|---|---|
+| `owner.dhaba@example.com` | Restaurant owner (tables, kitchen, QR ordering) |
+| `owner.store@example.com` | Retail shop owner (barcodes, stock) |
+| `owner.cloud@example.com` | Cloud kitchen owner (brands, Swiggy/Zomato prices); staff `cloud.manager@`, `cloud.kitchen@` |
+| `owner.expired@example.com` | Café whose subscription ended (locked, 402); staff `cashier.expired@` |
+| `manager1@`, `manager2@`, `cashier1@`, `cashier2@`, `waiter1@`, `waiter2@`, `kitchen1@`, `kitchen2@` | Restaurant staff for role testing |
+| `superadmin@`, `superadmin2@` | Tallyko super admins (console at `/admin`) |
+| `support@`, `support2@` | Read-only platform support |
 
-## 2. Previewing the App (Web UI)
-We have configured our React Native application to use **React Native Web**. This means the exact same code that runs on mobile phones can be viewed in your Google Chrome or Edge browser!
+All addresses end in `@example.com`. Demo businesses run on development access (no expiry), except the locked café.
 
-### How to see the Web UI:
-1. Ensure you have run `docker compose up`.
-2. Open your web browser and go to: **http://localhost:8081**
-3. **Hot-Reloading is Enabled!** If you open `frontend/src/001_auth_tenant/LoginScreen.js` in your code editor and change the text from "Login" to "Sign In", the web browser will instantly refresh to show your changes without you needing to rebuild anything!
+## 3. Everyday commands
 
-### Backend API Preview (Swagger):
-1. Go to: **http://localhost:8000/docs**
-2. You will see a beautiful interface containing every single API endpoint (Catalog, Billing, CRM, etc). You can even send test data from this screen!
+```bash
+docker compose ps                                     # status of every container
+docker compose logs -f backend                        # API logs (tracenest JSON)
+docker compose exec backend python manage.py status   # migrations applied / pending
+docker compose exec backend python manage.py make:migration "add notes to tables" --table tables
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py fresh --seed   # wipe the dev DB and start again
+docker compose exec backend python -m pytest -q       # backend tests
+docker compose down                                   # stop (data volumes are kept)
+```
 
----
+`./scripts/db.sh <command>` (Windows: `.\scripts\db.ps1`) is a shortcut for `manage.py`. All commands: [19_Database_Migrations.md](./19_Database_Migrations.md).
 
-## 3. Previewing on Mobile (Android Studio)
-While the Web UI is great for fast development, Tallyko is ultimately a mobile POS app. You should periodically test your code on a real Android emulator.
+**Tests never touch your dev data:** pytest creates and uses `<db>_test` (e.g. `tallyko_shared_test`) and Redis DB 1. Fixtures (`client`, `tenant_a`, `tenant_b`, `fresh_tenant`, `create_staff`, `create_product`, `random_client_ip`) are in `backend/tests/conftest.py`.
 
-### Step-by-Step Android Studio Guide:
-1. **Download & Install:** Download [Android Studio](https://developer.android.com/studio) and install it with default settings.
-2. **SDK Setup:** Open Android Studio. Go to `Tools > SDK Manager`. Ensure "Android 13.0 (Tiramisu)" or later is checked.
-3. **Create an Emulator (Virtual Phone):** 
-   - Go to `Tools > Device Manager` (or "Virtual Device Manager").
-   - Click "Create Device". Select a phone like the **Pixel 7**.
-   - Download the latest system image (e.g., API 33).
-   - Click the "Play" button next to your new device to launch the virtual phone on your screen.
-4. **Run the App:** 
-   - Open a *new* terminal window.
-   - Navigate to the frontend folder: `cd c:\python\Tallyko\frontend`
-   - Run the Metro Bundler: `npm start`
-   - In yet another terminal window in the frontend folder, run: `npm run android`
-5. The Tallyko app will now magically appear and install onto your Android emulator!
+## 4. Live reload
 
----
+- **Backend:** edits under `backend/` reload automatically (`uvicorn --reload` with polling, so it works on Windows bind mounts). New migration files apply on save (`manage.py watch`).
+- **Frontend:** run `docker compose up --watch` (or `docker compose watch` next to a running stack). Docker can't forward file-change events from a Windows/macOS folder into a Linux container, so Compose Watch copies your edits in and Metro hot-reloads them. Changing `package.json` rebuilds the image.
+- Frontend checks: `cd frontend && npx tsc --noEmit && npx jest` (Node 22).
 
-## 4. Advanced: Tracing Logs (Tracenest)
-We use a library called `tracenest` in our Python backend. This allows us to trace exactly what happens when a user clicks a button on the UI.
-When you view the backend logs (`docker compose logs backend`), you will see structured JSON logs that contain a `trace_id`. This means if a request fails, you can follow that exact `trace_id` through the logs to see the database query, the exact moment it failed, and why.
+## 5. Phones and tablets
+
+- **Quickest:** open `http://<your-PC-LAN-IP>:8081` in the phone's browser (same Wi-Fi). Bluetooth printing isn't available in a browser on iOS.
+- **Installable Android app:** set `APK_API_URL=http://<your-PC-LAN-IP>:8000/api/v1` in `.env` (or change the server on the sign-in screen), then `docker compose --profile android run --rm android-build` → `dist/tallyko-<version>.apk`. The first build downloads Gradle dependencies (~20 min).
+- **Expo Go** works for UI work but has no Bluetooth printer support (native modules) — use the APK for printing.
+
+## 6. Logs and tracing
+
+Every API response carries an `X-Trace-ID` header; search for it in `docker compose logs backend` or `backend/TraceNestLogs/app.log` to follow one request ([09](./09_Logging_And_Observability.md)).
+
+## 7. Before you change code
+
+- Read [CLAUDE.md](../CLAUDE.md) (hard rules and repository map) and the relevant feature spec.
+- Tenant isolation rules: [03](./03_Multi_Vendor_Architecture.md), [10](./10_Security_And_Auth.md).
+- UI rules: [20_High_Volume_UX.md](./20_High_Volume_UX.md).
+- When behaviour changes, update the spec and, if needed, the `.mmd` diagram in [diagrams/](./diagrams/README.md).

@@ -1,0 +1,38 @@
+%% 04 · Access model
+%% Effective access = what the business has (plan modules, per-business overrides, minus modules the owner hid)
+%% intersected with what the person's role may do. Enforced by require() on every request; the app hides the rest.
+flowchart LR
+    subgraph Business["What the business has"]
+        direction TB
+        plan["Plan (plans.features, limits)<br/>basic / standard / pro ..."]
+        ovr["Super admin overrides<br/>tenant_configs.feature_overrides,<br/>limit_overrides"]
+        hide["Owner hides unused modules<br/>business_settings.disabled_modules"]
+        feats(["Enabled modules"])
+        plan --> ovr --> hide --> feats
+    end
+
+    subgraph Person["What this person may do"]
+        direction TB
+        role["Role (roles.permissions)<br/>owner, manager, cashier,<br/>waiter, kitchen, custom"]
+        ownerall["Owner: every permission,<br/>can't be locked out"]
+        perms(["Role permissions"])
+        role --> perms
+        ownerall --> perms
+    end
+
+    map["PERMISSION_FEATURE<br/>each permission belongs to a module"]
+    eff{{"Effective permissions =<br/>role permissions whose module is enabled"}}
+    feats --> eff
+    perms --> eff
+    map --> eff
+
+    eff --> req["require('perm', feature='module')<br/>403 if module off or permission missing"]
+    eff --> me["GET /access/me<br/>app filters navigation and settings"]
+    limits["Plan limits (check_limit)<br/>max_staff enforced today"] --> req
+
+    subgraph Platform["Platform logins (separate)"]
+        direction TB
+        sa["super_admin: all console writes"]
+        sup["support: read-only console"]
+    end
+    Platform -. "403 on business routes" .-> req

@@ -1,83 +1,108 @@
-# Mobile App Architecture
+# App Architecture (web, Android, iOS)
 
-## 1. Single Codebase Strategy
+## 1. One codebase
 
-Tallyko requires a mobile application that runs on both Android and iOS from a single shared codebase to maximize development velocity and ensure feature parity across devices.
+`frontend/` is a single **Expo SDK 57** app (React Native 0.86, React 19, TypeScript strict, **expo-router**, **zustand**). It ships as:
 
-*   **Framework:** **React Native** (or Flutter). 
-*   **Target Devices:** Android Phones, Android Tablets (KDS/POS terminals), iPhones, and iPads. The UI must be fully responsive.
-*   **UX Philosophy:** Minimal taps, guided workflows, and clear visual hierarchy. It must be demonstrably easier to train staff on Tallyko than on competitors.
+- **Web / PWA** for laptop and desktop browsers (installable, service worker caches the app shell, never `/api`);
+- **Android** APK/AAB, built in Docker (`frontend/android.Dockerfile`) or with EAS;
+- **iOS** via EAS / App Store, or the web app added to the home screen.
 
-## 2. The Offline-First Imperative
+There is no separate owner dashboard: owner, manager, cashier, waiter and kitchen screens, the super admin console (`/admin`) and the public store pages are all routes in this app. Navigation is filtered by role, plan modules and business type (`src/components/nav/AppNav`: sidebar on ≥768 dp, bottom bar + "More" on phones). Every screen follows [20_High_Volume_UX.md](./20_High_Volume_UX.md).
 
-A POS system cannot stop working if the Wi-Fi drops. The app is architected with a robust local-first strategy.
-
-*   **Local Database:** WatermelonDB (React Native) or SQLite (Flutter).
-*   **Architecture Pattern:** The UI *only* ever reads from and writes to the local database. It never blocks waiting for a network request to save an order.
-*   **Background Sync:** A background worker constantly monitors the local DB for changes and pushes them to the backend API (`/api/v1/sync/push`). It also polls the backend (`/api/v1/sync/pull`) for updates made by other devices.
-
-## 3. State Management & Data Flow
-
-1.  **User Action:** Cashier taps "Pay" on an order.
-2.  **Local Write:** The app immediately saves the order as `status: 'completed', sync_status: 'pending'` in the local SQLite database.
-3.  **Instant Feedback:** The UI immediately updates and prints the receipt (via Bluetooth).
-4.  **Async Sync:** The sync manager detects the `pending` record and attempts to push it to the FastAPI backend.
-5.  **Confirmation:** Upon 200 OK from the server, the local record updates to `sync_status: 'synced'`.
-
-## 4. Hardware Integrations
-
-Interacting with hardware is a core requirement for a POS system.
-
-*   **Bluetooth Thermal Printers (2" / 3"):** 
-    *   The app uses native modules to discover and pair with ESC/POS compatible thermal printers.
-    *   Receipt generation involves converting order data into raw ESC/POS byte commands locally on the device (no cloud rendering required), ensuring instant offline printing.
-*   **Barcode Scanners:**
-    *   **Camera:** Built-in vision libraries for scanning QR menus or SKUs using the device camera.
-    *   **External USB/Bluetooth Scanners:** The app must support HID (Human Interface Device) keyboard inputs, listening for rapid keystrokes followed by a carriage return to auto-add items to the cart.
-
-## 5. Module Structure
-
-The codebase is organized by domain to allow clear separation of concerns between retail and restaurant workflows.
+## 2. Structure
 
 ```text
-/src
-  /core            (Auth, Sync Engine, Local DB Setup, Hardware/Bluetooth)
-  /ui              (Shared components: Buttons, Typography, Layouts)
-  /modules
-    /restaurant    (Tables, KDS, KOT logic)
-    /retail        (Barcode scanner logic, quick checkout)
-    /shared        (Billing, Inventory, CRM, Settings)
-  /services        (API clients)
+frontend/src
+  app/                expo-router routes: (auth)/login|signup, (app)/pos|orders|tables|online|kitchen|menu/*|inventory|
+                      customers|offers|reports|settings/*|watch|more, admin/*, store/[tenantId], subscription,
+                      privacy, delete-account
+  features/<area>/    screens and local state: pos, ops (tables, kitchen, online), catalog, settings, customers,
+                      offers, reports, owner, subscription, admin, public, auth
+  components/ui/      design system (Text, Button, Input, DataList, ActionMenu, SelectionBar, StatusPill, …)
+  components/nav/     AppNav
+  theme/              tokens (teal brand, slate neutrals, light/dark), ThemeProvider (useTheme, useLayout)
+  api/                client (timeouts, refresh on 401, lock on 402, ApiError.network), typed endpoints
+  store/              auth (SecureStore), access (/access/me), data (offline cache), outbox (offline bills),
+                      prefs (printer, paper, theme, server URL), subscription, badges
+  lib/                billing.ts (price preview = server maths), sync.ts, print/ (ESC/POS, layouts, printers),
+                      barcode/ (Code128, EAN-13, QR), gstin.ts, tax.ts, format.ts
 ```
 
-## 6. Architecture Diagram
+`frontend/android` and `frontend/ios` are generated by Expo CNG and not edited by hand. Store-compliance settings live in `app.json` ([18](./18_App_Store_And_Play_Compliance.md)).
 
+## 3. Data flow and offline
+
+There is **no local database** (no SQLite or WatermelonDB). Instead:
+
+- **Selling screens read from `store/data`**: an offline cache (AsyncStorage / browser storage) of settings, menu, variants, tables, channels, brands, tax classes and recent customers, refreshed by `POST /sync/pull`.
+- **Management screens call the API directly** and show loading / empty / error states.
+- **Bills made offline go to `store/outbox`** with a client-generated UUID, and `lib/sync.ts` replays them through `POST /sync/push`. The receipt is printed from `lib/billing.ts#previewTotals`, which mirrors the server's GST maths (including "GST only with a valid GSTIN").
+- On **401** the client refreshes the token once, then signs out. On **402** the app shows the renewal screen and pauses pushing; the outbox is kept.
+- Kitchen display and Online orders **poll every 5 s**; there are no WebSockets.
+
+<!-- diagram: 08_offline_sync -->
 ```mermaid
-flowchart TD
-    subgraph UI Layer
-        React[React Native Components]
-    end
+sequenceDiagram
+    autonumber
+    actor Cashier
+    participant POS as POS screen
+    participant Cache as store/data (offline cache)
+    participant Out as store/outbox
+    participant Sync as lib/sync.ts
+    participant API as FastAPI /api/v1/sync
+    participant DB as PostgreSQL
 
-    subgraph Core Logic
-        State[State Management / Hooks]
-        Hardware[Bluetooth / ESC/POS Printer]
-    end
+    Sync->>API: POST /sync/pull {since}
+    API-->>Sync: changed menu, tables, settings, tax classes + server_time
+    Sync->>Cache: merge and store server_time
 
-    subgraph Local Data
-        LocalDB[(Local SQLite DB)]
-        Sync[Sync Manager]
-    end
+    Cashier->>POS: add items, Pay
+    POS->>Cache: read menu, prices, tax classes
+    POS->>API: POST /orders {id: client UUID, items, payments}
+    API--xPOS: network error / timeout
+    POS->>POS: previewTotals (same GST maths as the server)
+    POS->>Out: save full order request with id and real created_at
+    POS-->>Cashier: receipt printed, short code until invoice no.
 
-    subgraph Remote
-        API[FastAPI Backend]
+    Note over Sync: runs on sign-in, every 60 s, when the<br/>connection returns and when the app is foregrounded
+    Sync->>API: POST /sync/push {orders: [...]}
+    loop each order, own savepoint
+        API->>DB: order id already exists?
+        alt already stored (reply was lost earlier)
+            DB-->>API: existing order
+            API-->>Sync: ok (same order, no duplicate)
+        else new
+            API->>DB: price on the server, create order<br/>(table got another bill meanwhile: separate bill)
+            API-->>Sync: ok
+        end
     end
-
-    React -->|Read/Write| State
-    State -->|CRUD| LocalDB
-    State -->|Print Cmds| Hardware
-    
-    LocalDB <-->|Watch| Sync
-    Sync <-->|REST Sync API| API
-    
-    style LocalDB fill:#f96,stroke:#333,stroke-width:2px
+    Sync->>Out: remove ok bills
+    alt 4xx for one bill (e.g. item removed)
+        Sync->>Out: keep it, show in Orders - Offline bills (Retry / Discard)
+    else 5xx, 401, 408, 429
+        Sync->>Out: keep and retry later
+    else 402 subscription locked
+        Sync->>Out: pause pushing, keep every bill until renewal
+    end
 ```
+
+*Diagram source: [`08_offline_sync.mmd`](diagrams/mermaid/08_offline_sync.mmd) · [SVG](diagrams/rendered/08_offline_sync.svg)*
+<!-- /diagram -->
+
+Details: [07_Offline_Sync_Strategy.md](./07_Offline_Sync_Strategy.md).
+
+## 4. Hardware
+
+- **Printers:** ESC/POS bytes are built on the device (`lib/print/escpos.ts`) and sent over Bluetooth Classic (Android), BLE (Android/iOS), Web Bluetooth (Chrome/Edge), or the system print dialog (AirPrint, USB, network printers). See [Printing.md](./features/Printing.md).
+- **Barcodes:** `expo-camera` scanning and keyboard-wedge USB/Bluetooth scanners (fast keystrokes ending in Enter). Codes are generated on the device (Code128, EAN-13, QR incl. UPI QR on bills).
+- **Secure storage:** tokens in `expo-secure-store` (Keychain/Keystore); `localStorage` on the web.
+
+## 5. Builds
+
+| Target | How |
+|---|---|
+| Web dev | `docker compose up --watch` → http://localhost:8081 |
+| Web production | `docker compose --profile preview up -d --build` (:8080) or the `web` service in `docker-compose.prod.yml` (Caddy) |
+| Android | `docker compose --profile android run --rm android-build` → `dist/tallyko-<version>.apk` + `.aab` (signed, 16 KB alignment checked) |
+| iOS | EAS (`eas.json`, needs an Apple account) or the home-screen web app |

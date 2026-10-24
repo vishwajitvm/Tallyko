@@ -1,0 +1,124 @@
+%% 16 · ERD - platform (global) tables
+%% Tables without tenant RLS, read through system sessions: businesses and routing, logins and devices,
+%% plans and subscriptions, console data and the GST library. Columns from backend/app/models/accounts.py,
+%% platform.py and tax.py (key columns only). global_vendors.id is the tenant_id used in every business table.
+erDiagram
+    global_vendors {
+        uuid id PK "tenant_id everywhere"
+        string name
+        string business_type "restaurant, retail, cloud_kitchen, cafe"
+        string plan_type "legacy"
+        datetime created_at
+    }
+    tenant_configs {
+        uuid vendor_id PK, FK
+        string db_url "null = shared DB"
+        string status "active, suspended, deleted"
+        string plan_key FK
+        json feature_overrides
+        json limit_overrides
+        datetime paid_until
+        int session_version "bump = sign out every device"
+        datetime lapsed_at
+    }
+    global_users {
+        uuid id PK
+        string email UK
+        string phone UK
+        string password_hash "bcrypt"
+        bool is_active
+        string platform_role "super_admin, support, null"
+    }
+    user_sessions {
+        uuid id PK "sid in tokens"
+        uuid user_id FK
+        uuid tenant_id "null for platform logins"
+        uuid staff_id
+        string kind "business, platform"
+        string device
+        datetime last_seen_at
+        datetime revoked_at
+        string revoked_reason
+    }
+    plans {
+        string key PK "basic, standard, pro"
+        string name
+        decimal price_monthly
+        json features "module keys"
+        json limits "max_staff, max_products, max_locations"
+        json billing_options "months, price, label"
+        bool is_active
+    }
+    subscriptions {
+        uuid id PK
+        uuid vendor_id FK
+        json snap_entitlements "immutable: kind, plan, features, limits, price, offer, amount, recorded_by"
+        datetime start_date
+        datetime end_date
+    }
+    subscription_offers {
+        uuid id PK
+        string code UK
+        string discount_type "percent, flat, none"
+        decimal discount_value
+        int extra_days
+        json plan_keys
+        int min_months
+        int max_redemptions
+        bool new_businesses_only
+        bool show_to_owners
+    }
+    subscription_requests {
+        uuid id PK
+        uuid vendor_id FK
+        string plan_key FK
+        int months
+        string offer_code
+        decimal amount
+        string method "UPI, bank"
+        string reference
+        string status "pending, approved, rejected"
+        string reviewed_by
+    }
+    owner_requests {
+        uuid id PK
+        uuid vendor_id FK
+        string kind "archive_bills, delete_bills, other"
+        json order_ids
+        string status "pending, done, rejected"
+        string action_taken "archived, deleted, none"
+        string response
+    }
+    platform_settings {
+        string key PK "demo days, grace_days, payment details, job summary"
+        json value
+    }
+    platform_audit_logs {
+        uuid id PK
+        string actor_email
+        string action
+        uuid target_tenant_id
+        json details "incl. snapshots of deleted bills"
+    }
+    tax_presets {
+        string key PK
+        string name
+        string hsn_sac
+    }
+    tax_preset_rates {
+        uuid id PK
+        string preset_key FK
+        datetime effective_from
+        decimal total_rate
+        json components "CGST, SGST rates"
+        string note "notification no."
+    }
+
+    global_vendors ||--|| tenant_configs : "routing and status"
+    global_vendors ||--o{ subscriptions : "periods"
+    global_vendors ||--o{ subscription_requests : "renewal claims"
+    global_vendors ||--o{ owner_requests : "ask Tallyko"
+    plans ||--o{ tenant_configs : "plan_key"
+    plans ||--o{ subscription_requests : "plan_key"
+    global_users ||--o{ user_sessions : "signed-in devices"
+    tax_presets ||--o{ tax_preset_rates : "dated versions"

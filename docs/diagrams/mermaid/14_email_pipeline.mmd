@@ -1,0 +1,39 @@
+%% 14 · Customer email pipeline
+%% Emails are queued in the database and delivered by an in-process worker over plain SMTP (any provider).
+%% No Celery, no queue broker. Development sends everything to Mailpit.
+flowchart LR
+    subgraph Triggers["What queues an email"]
+        direction TB
+        t1["Bill completed (customer has an email)<br/>welcome on the first visit, else e-receipt"]
+        t4["Loyalty reward unlocked"]
+        t2["Announce an offer<br/>POST /offers/{id}/announce<br/>(only customers who opted in)"]
+        t3["Test send from<br/>Settings -> Customer emails"]
+    end
+
+    tpl["email_templates<br/>subject, heading, body with {placeholders},<br/>button, accent colour<br/>values HTML-escaped, unknown placeholders rejected"]
+    q["queue_email()"]
+    cfg{"SMTP_HOST<br/>configured?"}
+    log[("email_logs<br/>status queued")]
+    skip[("email_logs<br/>status skipped")]
+
+    subgraph Worker["Email worker (asyncio task in the API lifespan)"]
+        direction TB
+        poll["every 5 s: up to 20 queued rows<br/>SELECT ... FOR UPDATE SKIP LOCKED<br/>(safe with several uvicorn workers)"]
+        send["render branded layout,<br/>send over SMTP"]
+        poll --> send
+    end
+
+    smtp["SMTP provider<br/>Gmail app password, Brevo, Zoho ...<br/>Mailpit :8025 in dev"]
+    sent[("sent + sent_at")]
+    retry[("error noted, retried<br/>failed after 3 attempts<br/>or recipient refused")]
+
+    Triggers --> q
+    tpl --> q
+    q --> cfg
+    cfg -- "yes" --> log
+    cfg -- "no" --> skip
+    log --> poll
+    send --> smtp
+    send -- "ok" --> sent
+    send -- "error" --> retry
+    ui["Settings -> delivery log<br/>GET /email/logs"] -.-> log

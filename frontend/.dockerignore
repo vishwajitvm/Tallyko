@@ -1,5 +1,12 @@
 node_modules
 npm-debug.log
 .expo
-.idea
-*.iml
+dist
+web-build
+android
+ios
+*.apk
+*.aab
+.env
+.env.*
+!.env.example

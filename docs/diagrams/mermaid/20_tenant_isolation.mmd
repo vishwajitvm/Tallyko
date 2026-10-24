@@ -1,0 +1,43 @@
+%% 20 · Tenant isolation
+%% How a business request gets a database session that can only see its own rows,
+%% and how platform work (super admin, auth, daily jobs) uses system sessions instead.
+flowchart TB
+    req(["Business request<br/>Bearer JWT: sub, tenant_id, role, sid, sv"])
+    pub(["Public request<br/>/public/{tenant_id}/..."])
+
+    subgraph Checks["get_current_user + open_tenant_session"]
+        direction TB
+        dec["Decode PyJWT access token"]
+        cfg["get_tenant_config(tenant_id)<br/>Redis cache 10 min, else tenant_configs"]
+        st{"status active?<br/>not locked?"}
+    end
+
+    subgraph Session["get_tenant_db / get_public_tenant_db"]
+        direction TB
+        route{"tenant_configs.db_url?"}
+        shared["Shared engine<br/>tallyko_shared"]
+        ded["Dedicated engine<br/>(routing only, no provisioning yet)"]
+        begin["On every transaction begin:<br/>SET LOCAL ROLE tallyko_app<br/>set_config('app.current_tenant_id', id, true)"]
+    end
+
+    subgraph PG["PostgreSQL"]
+        direction TB
+        rls["RLS policy tenant_isolation<br/>tenant_id = current_setting(...)<br/>child tables: visible when parent row is"]
+        grants["Role tallyko_app: no DELETE on orders, payments,<br/>kots, customers, products, categories,<br/>inventory_logs, tables. audit_logs and<br/>product_versions append-only (0059)"]
+    end
+
+    subgraph System["System sessions - bypass RLS (RLS not FORCEd)"]
+        direction TB
+        sys["get_shared_session_maker()<br/>connects as the DATABASE_URL login"]
+        uses["auth and routing, staff management,<br/>platform console, records_admin,<br/>email worker, daily subscription check"]
+    end
+
+    req --> dec --> cfg --> st
+    pub --> cfg
+    st -- "suspended: 403<br/>locked: 402" --> stop(["Request refused"])
+    st -- "ok" --> route
+    route -- "null" --> shared --> begin
+    route -- "set" --> ded --> begin
+    begin --> rls --> grants
+    app["App code still filters tenant_id<br/>and checks every id from the request"] -.-> rls
+    uses --> sys --> PG

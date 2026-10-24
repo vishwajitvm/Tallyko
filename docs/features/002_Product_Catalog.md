@@ -14,63 +14,72 @@ Without a catalog, you can't ring up a sale. We designed this to be much faster 
 
 ### Edge Cases
 *   *What if I want to change a price temporarily?* You can easily edit the price in the catalog, and the change takes effect immediately on all POS terminals and customer QR menus.
-*   *What if I have 1,000 items? Do I type them one by one?* No, Tallyko supports bulk importing via an Excel/CSV file on the Web Dashboard, or using our AI Menu Upload tool.
+*   *What if I have 1,000 items? Do I type them one by one?* No: photograph your printed menu ([010](./010_AI_Menu_Generator.md)) and import the list, or select many items and change them together (bulk edit).
+*   *What if I delete an item by mistake?* Deleting only takes it off the menu; it can be switched back on, and every change is kept in the item's history ([019](./019_Owner_Watch_No_Deletes_And_Menu_History.md)).
+*   *Different prices on Swiggy and Zomato?* Each item can have its own price or be hidden per channel ([012](./012_Aggregators_And_Cloud_Kitchens.md)).
 
 ---
 
 ## Section 2 — For the Developer
 
-### Data Model Touched (Shared Tenant DB)
-*   `categories`: `id`, `tenant_id`, `name`, `sort_order`
-*   `products`: `id`, `tenant_id`, `category_id`, `name`, `description`, `base_price`, `barcode`, `is_active`, `print_to_kitchen`
+### Data model (tenant tables, RLS)
+*   `product_categories`: `id`, `tenant_id`, `name`, `sort_order`, `is_active`
+*   `products`: `id`, `tenant_id`, `category_id`, `brand_id`, `tax_class_id`, `name`, `description`, `base_price`, `cost_price`, `barcode`, `sku`, `unit`, `is_veg`, `print_to_kitchen`, `track_stock`, `low_stock_threshold`, `channel_prices` (JSON), `is_active`, `updated_at`
+*   `product_variants` (child of products): `variant_name`, `price_modifier` (API takes the absolute option price)
+*   `product_versions`: append-only history ([13_menu_versioning](../diagrams/mermaid/13_menu_versioning.mmd))
+*   `products.tax_rate` is deprecated: tax comes from `tax_class_id` via `TaxResolver` ([015](./015_GST_And_Tax_Management.md)).
 
-### API Endpoints
-*   `GET /api/v1/products`: List all products (supports pagination, filtering by category/barcode).
-*   `POST /api/v1/products`: Create a new product.
-*   `PUT /api/v1/products/{id}`: Update an existing product.
-*   `DELETE /api/v1/products/{id}`: Soft delete a product.
+### API endpoints
+*   `GET/POST /api/v1/catalog/categories`, `PUT/DELETE /catalog/categories/{id}` (delete = `is_active` false)
+*   `GET /catalog/products` (search, category, paging), `GET /catalog/products/{id}`, `GET /catalog/products/by-barcode/{code}`
+*   `POST /catalog/products`, `PUT /catalog/products/{id}`, `DELETE /catalog/products/{id}` (switch off, never erased)
+*   `POST /catalog/products/bulk` (bulk edit), `POST /catalog/bulk-import` (from the photo import), `POST /catalog/products/{id}/barcode` (generate one)
+*   `GET /catalog/products/{id}/history`, `POST /catalog/products/{id}/history/{version}/restore`
+*   POS devices also receive the catalog through `POST /sync/pull`.
 
-### Request/Response Shape (Create Product)
-**Request:**
+### Request (create product)
 ```json
 {
-  "name": "Spring Rolls",
-  "category_id": "cat_123",
-  "base_price": 150.00,
-  "barcode": null,
-  "print_to_kitchen": true
+  "name": "Paneer Tikka",
+  "category_id": "…",
+  "base_price": 220,
+  "tax_class_id": null,
+  "variants": [{ "name": "Half", "price": 140 }, { "name": "Full", "price": 220 }],
+  "channel_prices": { "SWIGGY": { "price": 249 }, "QR": { "available": false } },
+  "is_veg": true,
+  "print_to_kitchen": true,
+  "track_stock": false
 }
 ```
 
-### Validation Rules
-*   `name` is required and must be unique within the `tenant_id`.
-*   `base_price` must be >= 0.
-*   `barcode`, if provided, must be unique within the `tenant_id`.
+### Validation rules
+*   `name` 1–120 characters; prices 0–10,00,000; up to 20 variants.
+*   `barcode` (letters, digits, `-`, `.`) must be unique among the business's products (409 otherwise).
+*   Category, brand and tax class ids must belong to the business (FK checks bypass RLS, so the router checks them).
+*   Plan limits: only `max_staff` is enforced today (`check_limit`); `max_products` is stored on the plan but not checked.
 
-### Multi-Tenant Considerations
-Every single database query (Select, Insert, Update, Delete) must include the `tenant_id` constraint via the active Postgres session RLS to prevent cross-vendor data leakage.
+### Multi-tenant considerations
+Routes use `require("menu.manage", …)` and `get_tenant_db`; RLS filters every query. The app role can't DELETE products or categories.
 
-### Logging Events (tracenest)
-*   `product_created`: Includes `product_id`, `name`, and `tenant_id`.
-*   `product_deleted`: Logs when a user removes an item from their catalog.
+### Logging and audit
+`menu.change` audit entries (owner's watch) and a `product_versions` row for every change.
 
-### Engineering Complexity Rating
-**Low.** This is standard CRUD functionality. The primary complexity lies in ensuring the UI on the mobile app is highly responsive and minimizes the number of taps required.
-
-### Sequence Diagram
+### Sequence (edit an item)
 ```mermaid
 sequenceDiagram
     participant App
-    participant API
-    participant DB as Postgres (RLS Active)
-    participant Cache as Redis
+    participant API as FastAPI /catalog
+    participant DB as PostgreSQL (tallyko_app + RLS)
 
-    App->>API: POST /api/v1/products (JWT: Tenant 101)
-    
-    API->>API: Validate Payload
-    API->>DB: SET LOCAL tenant=101; INSERT INTO products...
-    DB-->>API: Success (ID: P12)
-    
-    API-)Cache: Invalidate /products cache for Tenant 101
-    API-->>App: 201 Created (Product P12)
+    App->>API: PUT /catalog/products/{id} (JWT)
+    API->>API: require(menu permission), validate, check ids belong to tenant
+    API->>DB: ensure_baseline (version 1 for older items)
+    API->>DB: UPDATE products (+ variants)
+    API->>DB: INSERT product_versions (Price Rs 300 -> Rs 340)
+    API->>DB: INSERT audit_logs menu.change
+    API-->>App: 200 product
+    Note over App: other devices get it on the next /sync/pull
 ```
+
+### Tests
+`backend/tests/integration/test_catalog.py`, `test_owner_controls.py` (history and restore).

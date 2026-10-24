@@ -1,0 +1,300 @@
+<mxfile host="Electron" modified="2026-10-25T00:00:00.000Z" agent="Tallyko docs (hand-laid, uncompressed)" version="24.7.17" type="device" pages="2">
+  <diagram id="tallyko-records-and-audit-nothing-deleted-and-the-owner-s-watch" name="Nothing deleted and the owner's watch">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="900" math="0" shadow="0" background="#ffffff">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;b&gt;Tallyko · Records and audit · nothing deleted by a business&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;Database grants make deletion impossible for the app; the owner watches what staff change and asks Tallyko for corrections&lt;/font&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=none;fontColor=#ffffff;fontSize=18;align=left;spacingLeft=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1490" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="title_meta" value="&lt;b&gt;v2.0.0&lt;/b&gt;&lt;br&gt;2026-10-25" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0f766e;fontColor=#0f766e;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="20" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="grants" value="Database role grants · migration 0059 · role tallyko_app" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#e1d5e7;swimlaneFillColor=#f9f6fb;strokeColor=#9673a6;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="100" width="820" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="g1" value="&lt;b&gt;No DELETE&lt;/b&gt; (SELECT, INSERT, UPDATE): orders, payments, kots, customers, products, product_categories, inventory_logs, tables" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;spacing=6;" vertex="1" parent="grants">
+          <mxGeometry x="20" y="40" width="780" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="g2" value="&lt;b&gt;Append-only&lt;/b&gt; (SELECT, INSERT): audit_logs, product_versions" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;spacing=6;" vertex="1" parent="grants">
+          <mxGeometry x="20" y="135" width="780" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="g3" value="Other tenant tables: SELECT, INSERT, UPDATE, DELETE · every tenant table has the RLS policy tenant_id = app.current_tenant_id" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;spacing=6;" vertex="1" parent="grants">
+          <mxGeometry x="20" y="210" width="780" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="g4" value="&lt;b&gt;So a business cancels or hides instead of deleting&lt;/b&gt;&lt;br&gt;bill → status cancelled · line → removed / void · comp → price 0 · menu item, category, table, offer, brand → is_active false · staff → is_active false&lt;br&gt;Only Tallyko's super admin archives or deletes, through a system session." style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffffff;strokeColor=#9e9e9e;fontSize=11;spacing=6;" vertex="1" parent="grants">
+          <mxGeometry x="20" y="290" width="780" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="watch" value="Owner's watch · owner only" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#ffe6cc;swimlaneFillColor=#fff9f2;strokeColor=#d79b00;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="880" y="100" width="800" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="w1" value="&lt;b&gt;audit_logs&lt;/b&gt;: order.cancel, order.void, order.comp, order.discount, staff and settings changes" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="watch">
+          <mxGeometry x="20" y="40" width="360" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="w2" value="&lt;b&gt;order_items&lt;/b&gt;: void, removed and comp lines with reason and staff" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="watch">
+          <mxGeometry x="20" y="115" width="360" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="w3" value="&lt;b&gt;orders&lt;/b&gt;: cancelled bills, discounts, bills archived by Tallyko" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="watch">
+          <mxGeometry x="20" y="190" width="360" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="w4" value="&lt;b&gt;product_versions&lt;/b&gt;: menu changes made by staff (price, tax, hidden)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="watch">
+          <mxGeometry x="20" y="265" width="360" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="w5" value="&lt;b&gt;WatchScreen&lt;/b&gt; (owner only)&lt;br&gt;GET /owner/watch · /owner/watch/events&lt;br&gt;filter by day, staff and kind; open the bill or the item's history" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="watch">
+          <mxGeometry x="440" y="120" width="340" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="w_note" value="Managers and staff never see this list; it shows what staff did so the owner can follow up." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=11;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="watch">
+          <mxGeometry x="20" y="345" width="760" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_w1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="w1" target="w5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_w2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="w2" target="w5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_w3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="w3" target="w5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_w4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="w4" target="w5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ask" value="Owner asks Tallyko · owner_requests" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#d5e8d4;swimlaneFillColor=#f5faf4;strokeColor=#82b366;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="560" width="1660" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="r1" value="Owner: &lt;b&gt;Ask Tallyko&lt;/b&gt; sheet · archive test bills, delete bills or something else" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="ask">
+          <mxGeometry x="20" y="60" width="270" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="r2" value="&lt;b&gt;POST /owner/requests&lt;/b&gt; → owner_requests (pending): kind, order_ids, message" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="ask">
+          <mxGeometry x="330" y="60" width="290" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="r3" value="Console &lt;b&gt;Requests&lt;/b&gt; screen lists pending requests" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="ask">
+          <mxGeometry x="660" y="60" width="290" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="r4" value="Super admin acts on the bills (Archive and delete page) through a system session" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="ask">
+          <mxGeometry x="990" y="60" width="290" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="r5" value="&lt;b&gt;POST /platform/owner-requests/{id}/resolve&lt;/b&gt;: done or rejected, action_taken, response → shown to the owner" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="ask">
+          <mxGeometry x="1320" y="60" width="290" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ac_r1_r2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="r1" target="r2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ac_r2_r3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="r2" target="r3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ac_r3_r4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="r3" target="r4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ac_r4_r5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="r4" target="r5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="Legend" style="swimlane;rounded=1;arcSize=4;html=1;startSize=24;collapsible=0;fillColor=#f3f4f6;swimlaneFillColor=#ffffff;strokeColor=#9ca3af;fontStyle=1;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="810" width="1070" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw0" value="" style="rounded=1;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="legend">
+          <mxGeometry x="12" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx0" value="Restricted grants" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="40" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw1" value="" style="rounded=1;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="legend">
+          <mxGeometry x="187" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx1" value="Normal grants" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="215" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw2" value="" style="rounded=1;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="legend">
+          <mxGeometry x="362" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx2" value="Owner's watch" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="390" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw3" value="" style="rounded=1;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="legend">
+          <mxGeometry x="537" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx3" value="Requests" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="565" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw4" value="" style="rounded=1;html=1;fillColor=#ffffff;strokeColor=#9e9e9e;" vertex="1" parent="legend">
+          <mxGeometry x="712" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx4" value="Rule" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="740" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed5" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="887" y="40" as="sourcePoint" />
+            <mxPoint x="915" y="40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx5" value="request / call" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="921" y="29" width="135" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed6" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;dashed=1;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="12" y="66" as="sourcePoint" />
+            <mxPoint x="40" y="66" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx6" value="async, logical or optional" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="46" y="55" width="135" height="22" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="tallyko-records-and-audit-archive-delete-and-menu-versions" name="Archive, delete and menu versions">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1000" math="0" shadow="0" background="#ffffff">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;b&gt;Tallyko · Records and audit · archive, hard delete and menu versions&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;Super admin corrections (services/records_admin.py) and append-only menu history (services/menu_history.py)&lt;/font&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=none;fontColor=#ffffff;fontSize=18;align=left;spacingLeft=16;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1490" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="title_meta" value="&lt;b&gt;v2.0.0&lt;/b&gt;&lt;br&gt;2026-10-25" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0f766e;fontColor=#0f766e;fontSize=13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="20" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ad" value="Archive and hard delete · super admin only · platform router, system session" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#eeeeee;swimlaneFillColor=#fafafa;strokeColor=#666666;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="100" width="1660" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="d1" value="Console → business detail → &lt;b&gt;Records&lt;/b&gt;: search bills incl. archived · GET /platform/businesses/{id}/orders" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="ad">
+          <mxGeometry x="20" y="60" width="260" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="d2" value="Archive or delete?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="ad">
+          <mxGeometry x="320" y="65" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="d3" value="&lt;b&gt;Archive&lt;/b&gt;: POST …/orders/archive · running bills cancelled first · archived_at + reason" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="ad">
+          <mxGeometry x="560" y="40" width="300" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="d4" value="Hidden from lists and reports · GST invoice numbers stay continuous · undo with …/orders/unarchive" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;spacing=6;" vertex="1" parent="ad">
+          <mxGeometry x="900" y="40" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="d8" value="Every action → &lt;b&gt;platform_audit_logs&lt;/b&gt; (actor, business, details)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="ad">
+          <mxGeometry x="1260" y="40" width="370" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="d5" value="&lt;b&gt;Hard delete&lt;/b&gt;: POST …/orders/delete · bill_snapshot() of each bill first" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;spacing=6;" vertex="1" parent="ad">
+          <mxGeometry x="560" y="200" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="d6" value="Reversed like a cancel: stock (inventory_logs), loyalty points, offer usage · then payments, order_items, kots, offer_redemptions, the bill's inventory_logs and the order are deleted · email_logs unlinked" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;spacing=6;" vertex="1" parent="ad">
+          <mxGeometry x="900" y="200" width="320" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="d7" value="Snapshot kept in &lt;b&gt;platform_audit_logs&lt;/b&gt; · the console warns that GST invoice numbers will have a gap" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;spacing=6;" vertex="1" parent="ad">
+          <mxGeometry x="1260" y="200" width="370" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ad_note" value="Archive is preferred. Hard delete is permanent and Tallyko-only; a business can do neither." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=11;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="ad">
+          <mxGeometry x="20" y="340" width="860" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d1_d2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="d1" target="d2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d2_d3" value="archive" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="d2" target="d3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d2_d5" value="delete" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="d2" target="d5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="430" y="355" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_d3_d4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="d3" target="d4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d4_d8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="d4" target="d8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d5_d6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="d5" target="d6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d6_d7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="d6" target="d7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mv" value="Menu versioning · product_versions is append-only" style="swimlane;rounded=1;arcSize=4;html=1;whiteSpace=wrap;startSize=28;collapsible=0;fillColor=#d5e8d4;swimlaneFillColor=#f5faf4;strokeColor=#82b366;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="560" width="1660" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" value="Any product change: edit, bulk edit, channel prices, hide / show, tax class, import" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="mv">
+          <mxGeometry x="20" y="60" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="m2" value="&lt;b&gt;menu_history.record()&lt;/b&gt; appends a product_versions row: version n + 1, snapshot json, who, when" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="mv">
+          <mxGeometry x="350" y="60" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="m3" value="change text: “Price ₹300 → ₹340”, “Hidden from menu”, “Created”" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="mv">
+          <mxGeometry x="680" y="60" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="m4" value="History sheet on the product (ProductHistorySheet) · staff changes appear on the owner's watch" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="mv">
+          <mxGeometry x="1010" y="60" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="m5" value="&lt;b&gt;Restore version k&lt;/b&gt; → the product is updated and a new version “Restored version k” is added" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;spacing=6;" vertex="1" parent="mv">
+          <mxGeometry x="1340" y="60" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="mc_m1_m2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="m1" target="m2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mc_m2_m3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="m2" target="m3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mc_m3_m4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="m3" target="m4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mc_m4_m5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="m4" target="m5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_m5_m2" value="appends, never rewrites" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4b5563;fontSize=10;fontColor=#1f2937;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="m5" target="m2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1510" y="760" />
+              <mxPoint x="520" y="760" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mv_note" value="Old bills never change: order_items keep their own name, price and GST snapshot. tallyko_app can't UPDATE or DELETE product_versions." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=11;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="mv">
+          <mxGeometry x="20" y="240" width="1600" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="Legend" style="swimlane;rounded=1;arcSize=4;html=1;startSize=24;collapsible=0;fillColor=#f3f4f6;swimlaneFillColor=#ffffff;strokeColor=#9ca3af;fontStyle=1;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="890" width="1070" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw0" value="" style="rounded=1;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="legend">
+          <mxGeometry x="12" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx0" value="Super admin action" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="40" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw1" value="" style="rounded=1;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="legend">
+          <mxGeometry x="187" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx1" value="Permanent delete" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="215" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw2" value="" style="rounded=1;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="legend">
+          <mxGeometry x="362" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx2" value="Platform audit" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="390" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sw3" value="" style="rounded=1;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="legend">
+          <mxGeometry x="537" y="32" width="22" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_tx3" value="Menu history" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="565" y="29" width="141" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed4" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="712" y="40" as="sourcePoint" />
+            <mxPoint x="740" y="40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx4" value="request / call" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="746" y="29" width="135" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_ed5" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#4b5563;fontSize=10;dashed=1;" edge="1" parent="legend">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="887" y="40" as="sourcePoint" />
+            <mxPoint x="915" y="40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_tx5" value="async, logical or optional" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;strokeColor=none;fillColor=none;spacing=4;" vertex="1" parent="legend">
+          <mxGeometry x="921" y="29" width="135" height="22" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

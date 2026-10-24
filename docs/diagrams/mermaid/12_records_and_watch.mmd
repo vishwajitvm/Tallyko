@@ -1,0 +1,43 @@
+%% 12 · Records and the owner's watch
+%% Nothing is deleted by a business: statuses and is_active flags instead, enforced by the database role.
+%% The owner sees every cancellation, removal, comp, discount and menu change; only Tallyko archives or deletes.
+flowchart LR
+    subgraph Shop["In the shop (any staff, by permission)"]
+        direction TB
+        a1["Cancel a bill -> status cancelled"]
+        a2["Remove / void an item -> kitchen_status<br/>removed or void (line kept)"]
+        a3["Comp / discount -> comp_reason, discount kept"]
+        a4["Delete menu item, category, table<br/>-> is_active = false"]
+        a5["Edit menu -> new product_versions row"]
+    end
+
+    db[("PostgreSQL, role tallyko_app<br/>no DELETE on bills, payments, KOTs, customers,<br/>products, categories, stock, tables<br/>audit_logs + product_versions append-only")]
+    audit[("audit_logs<br/>OWNER_ONLY_ACTIONS: order.cancel, void_item,<br/>remove_item, comp, discount, split, merge,<br/>reprint, archive, menu.change")]
+
+    Shop --> db
+    Shop -- "audit.record" --> audit
+
+    subgraph Owner["Owner only (not a grantable permission)"]
+        direction TB
+        watch["Owner's watch  GET /owner/watch<br/>totals, per-staff ranking, timeline"]
+        ask["Ask Tallyko  POST /owner/requests<br/>pick bills + reason"]
+        watch --> ask
+    end
+    audit --> watch
+    mgr["Managers with audit.view<br/>never see owner-only entries"] -.- audit
+
+    req[("owner_requests<br/>pending -> done / rejected")]
+    ask --> req
+
+    subgraph Tallyko["Tallyko super admin console (system session, platform-audited)"]
+        direction TB
+        review{"Owner requests or<br/>Business -> Records"}
+        arch["Archive (preferred)<br/>archived_at set, hidden from lists + reports,<br/>invoice series stays continuous, undoable"]
+        del["Delete permanently (typed confirmation)<br/>1 reverse like a cancel: stock, loyalty, offer usage<br/>2 snapshot to platform_audit_logs<br/>3 remove bill, lines, payments, KOTs<br/>warns about GST invoice gaps"]
+        review --> arch
+        review --> del
+    end
+    req --> review
+    resp(["Owner sees the response<br/>GET /owner/requests"])
+    arch --> resp
+    del --> resp

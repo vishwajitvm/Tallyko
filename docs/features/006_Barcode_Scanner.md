@@ -12,34 +12,36 @@ While restaurants use visual grids for menus, retail businesses (grocery, pharma
 ## 3. How to Use
 
 ### A. Setting Up Barcodes (In Catalog)
-1. Go to the **Catalog** tab.
+1. Go to **Menu** (items).
 2. When creating or editing a product, locate the `Barcode/SKU` field.
-3. You can manually type a numeric SKU, or tap the camera icon next to the field to scan the product's physical barcode to save it to the database.
+3. Type or scan the product's barcode, or let Tallyko generate one (`POST /catalog/products/{id}/barcode`) and print labels (Code128 / EAN-13).
 
 ### B. High-Speed Billing
-1. Go to the **Scanner** tab on the bottom navigation bar.
-2. The device camera will activate (or it will listen for input from a connected physical scanner).
+1. Open **Billing**. A USB/Bluetooth scanner works straight away (it types the code and Enter); on a phone or tablet tap the scan button to use the camera.
 3. Hold the barcode in front of the camera.
 4. The item is instantly added to the current cart. A subtle beep/haptic feedback confirms success.
 5. Once all items are scanned, tap **Proceed to Checkout**.
 
 ## 4. Under the Hood (Data Flow)
 
+Lookup happens on the device against the offline menu cache (`store/data`), so scanning works without internet. The server lookup `GET /catalog/products/by-barcode/{code}` is used by management screens.
+
 ```mermaid
 sequenceDiagram
     actor Cashier
-    participant App as Mobile App
-    participant DB as Local SQLite (Offline)
-    
-    Cashier->>App: Scans Barcode "89012345"
-    App->>DB: Query Product where barcode == "89012345"
-    
-    alt Product Found
-        DB-->>App: Return "Lays Classic 50g"
-        App->>App: Add to Cart (Qty 1)
-        App-->>Cashier: Beep! (Success)
-    else Product Not Found
-        DB-->>App: Null
-        App-->>Cashier: Error Buzz! "Unrecognized Item"
+    participant App as App (Billing)
+    participant Cache as Offline menu cache (store/data)
+
+    Cashier->>App: scan "89012345" (camera or keyboard-wedge scanner)
+    App->>Cache: find product or variant with this barcode
+    alt found
+        Cache-->>App: Lays Classic 50g
+        App->>App: add to cart, or +1 if already there
+        App-->>Cashier: beep / haptic
+    else not found
+        Cache-->>App: none
+        App-->>Cashier: "Unrecognised item", search by name or SKU
     end
 ```
+
+The bill itself also carries a barcode (its short `code`), so a receipt can be scanned to find the bill later. Encoders: `frontend/src/lib/barcode/` (Code128, EAN-13, QR), tested in `frontend/src/lib/barcode/__tests__`.

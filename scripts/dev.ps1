@@ -1,4 +1,3 @@
-# Start Tallyko in development mode on Windows via docker compose
-
-Write-Host "Starting docker-compose services in development mode..." -ForegroundColor Green
-docker compose up --build
+# Start the full local stack with live reload (API :8000, web :8081)
+Set-Location (Join-Path $PSScriptRoot "..")
+docker compose up --build --watch

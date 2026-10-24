@@ -1,0 +1,38 @@
+%% 18 · Deployment
+%% Development compose (docker-compose.yml, with host ports and optional profiles)
+%% and production compose (docker-compose.prod.yml). Everything runs in Docker Compose.
+flowchart LR
+    subgraph Dev["docker-compose.yml - development"]
+        direction TB
+        dweb["web<br/>Expo web dev server<br/>:8081 (Compose Watch)"]
+        dapi["backend<br/>uvicorn --reload :8000 (/docs)<br/>manage.py migrate + watch"]
+        dmail["mailpit<br/>UI 127.0.0.1:8025"]
+        ddb[("db<br/>postgres:15-alpine<br/>127.0.0.1:5433")]
+        dcache[("cache<br/>redis:7-alpine")]
+        subgraph Profiles["Optional profiles"]
+            direction TB
+            prev["web-preview (--profile preview)<br/>Caddy + static build :8080"]
+            abuild["android-build (--profile android)<br/>JDK 17, SDK 36, keystore volume<br/>-> dist/tallyko-x.apk + .aab"]
+        end
+        dweb --> dapi
+        dapi --> ddb
+        dapi --> dcache
+        dapi -- "SMTP :1025" --> dmail
+        prev --> dapi
+    end
+
+    subgraph Prod["docker-compose.prod.yml - production"]
+        direction TB
+        caddy["web<br/>Caddy: :80 / :443 (HTTP/3)<br/>Let's Encrypt, static web, /api proxy"]
+        papi["backend (non-root)<br/>migrate on start, uvicorn x WEB_CONCURRENCY<br/>healthcheck /health (DB + Redis)"]
+        pdb[("db<br/>postgres:15-alpine<br/>volume pg_data")]
+        pcache[("cache<br/>redis:7-alpine, 128 MB LRU")]
+        psmtp["Any SMTP provider<br/>(SMTP_* in .env)"]
+        caddy --> papi
+        papi --> pdb
+        papi --> pcache
+        papi -.-> psmtp
+    end
+
+    devices(["Browsers, Android, iOS"]) --> caddy
+    backup["scripts/backup_db.*<br/>nightly dump"] -.-> pdb

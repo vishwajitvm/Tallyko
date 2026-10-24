@@ -1,0 +1,226 @@
+%% 17 · ERD - business (tenant) tables
+%% Every table is protected by Postgres RLS: it has tenant_id (TENANT_RLS), or follows its parent row (child_rls:
+%% product_variants, order_items, payments, tax_class_rates). Key columns only, from backend/app/models/*.py.
+%% Not shown for space: tenant_counters (invoice / KOT / token sequences), email_templates.
+erDiagram
+    locations {
+        uuid id PK
+        uuid tenant_id
+        string name
+    }
+    users {
+        uuid id PK "staff membership"
+        uuid tenant_id
+        string username "login email"
+        string role "roles.key"
+        uuid location_id FK "null = every branch"
+        bool is_active
+    }
+    roles {
+        uuid id PK
+        uuid tenant_id
+        string key UK
+        json permissions
+        bool is_system
+    }
+    business_settings {
+        uuid tenant_id PK
+        string business_type
+        string gstin
+        string gst_registration "regular, composition, unregistered"
+        uuid default_tax_class_id FK
+        bool prices_include_tax
+        string upi_id
+        bool qr_ordering_enabled
+        string qr_payment_mode "counter, upi, both"
+        json disabled_modules "owner-hidden"
+    }
+    sales_channels {
+        uuid id PK
+        uuid tenant_id
+        string code UK "POS, QR, ONLINE, SWIGGY, ZOMATO ..."
+        decimal commission_pct
+        decimal price_adjust_pct
+        string webhook_secret
+        bool auto_accept
+    }
+    brands {
+        uuid id PK
+        uuid tenant_id
+        string name
+        bool is_active
+    }
+    audit_logs {
+        uuid id PK
+        uuid tenant_id
+        uuid actor_staff_id
+        string action "order.cancel, menu.change ..."
+        string summary
+        json details
+    }
+    product_categories {
+        uuid id PK
+        uuid tenant_id
+        string name
+        bool is_active
+    }
+    products {
+        uuid id PK
+        uuid tenant_id
+        uuid category_id FK
+        uuid brand_id FK
+        uuid tax_class_id FK
+        string name
+        decimal base_price
+        string barcode
+        json channel_prices "per channel price, available"
+        bool track_stock
+        bool is_active
+    }
+    product_variants {
+        uuid id PK
+        uuid product_id FK
+        string variant_name
+        decimal price_modifier
+    }
+    product_versions {
+        uuid id PK
+        uuid product_id FK
+        int version
+        json snapshot
+        string change "Price 300 to 340"
+        string changed_by_name
+    }
+    tax_classes {
+        uuid id PK
+        uuid tenant_id
+        string code UK
+        string hsn_sac
+        string preset_key
+        bool follow_preset
+    }
+    tax_class_rates {
+        uuid id PK
+        uuid tax_class_id FK
+        datetime effective_from
+        decimal total_rate
+        json components
+    }
+    tables {
+        uuid id PK
+        uuid tenant_id
+        uuid location_id FK
+        string table_number
+        string status "free, occupied"
+        uuid assigned_staff_id FK
+        bool is_active
+    }
+    customers {
+        uuid id PK
+        uuid tenant_id
+        string phone
+        string email
+        bool marketing_opt_in
+        int points
+        int visits
+    }
+    orders {
+        uuid id PK "client-generated, idempotency key"
+        uuid tenant_id
+        uuid table_id FK
+        uuid customer_id FK
+        uuid brand_id FK
+        uuid offer_id FK
+        uuid waiter_id FK
+        uuid settled_by FK
+        string status "placed, open, completed, cancelled, merged"
+        string channel
+        string external_order_id
+        string invoice_no
+        string bill_type "tax_invoice, bill_of_supply"
+        string bill_label
+        int guests
+        decimal total_amount
+        json payment_claim
+        datetime archived_at
+    }
+    order_items {
+        uuid id PK
+        uuid order_id FK
+        uuid product_id FK
+        uuid variant_id FK
+        uuid kot_id FK
+        int quantity
+        decimal unit_price "snapshot"
+        json tax_components "GST snapshot"
+        string kitchen_status "pending..served, void, removed"
+        string void_reason
+        string comp_reason
+    }
+    kots {
+        uuid id PK
+        uuid tenant_id
+        uuid order_id FK
+        int kot_no
+        string status "follows its lines"
+    }
+    payments {
+        uuid id PK
+        uuid order_id FK
+        string method "CASH, CARD, UPI, AGGREGATOR ..."
+        decimal amount
+        string reference
+    }
+    inventory_logs {
+        uuid id PK
+        uuid tenant_id
+        uuid product_id FK
+        int quantity_change
+        string reason "sale, wastage, restock, return"
+        uuid order_id
+    }
+    offers {
+        uuid id PK
+        uuid tenant_id
+        string kind "bill, items, loyalty"
+        string benefit_type "percent, flat, free_item"
+        bool auto_apply
+        int uses_count
+    }
+    offer_redemptions {
+        uuid id PK
+        uuid offer_id FK
+        uuid order_id FK, UK
+        uuid customer_id FK
+        decimal discount_amount
+    }
+    email_logs {
+        uuid id PK
+        uuid tenant_id
+        string to_email
+        string template_key
+        string status "queued, sent, failed, skipped"
+    }
+
+    locations ||--o{ users : "staff"
+    locations ||--o{ tables : "floor"
+    roles ||--o{ users : "role key"
+    tax_classes ||--o{ tax_class_rates : "dated rates"
+    tax_classes ||--o{ products : "tax class"
+    product_categories ||--o{ products : "category"
+    brands ||--o{ products : "brand"
+    products ||--o{ product_variants : "options"
+    products ||--o{ product_versions : "history"
+    products ||--o{ inventory_logs : "stock ledger"
+    tables ||--o{ orders : "several open bills"
+    customers ||--o{ orders : "bills"
+    users ||--o{ orders : "waiter / settled by"
+    orders ||--o{ order_items : "lines"
+    orders ||--o{ kots : "tickets"
+    kots ||--o{ order_items : "batch"
+    orders ||--o{ payments : "payments"
+    products ||--o{ order_items : "sold"
+    offers ||--o{ offer_redemptions : "uses"
+    orders ||--o| offer_redemptions : "one per bill"
+    customers ||--o{ email_logs : "emails"
+    sales_channels ||--o{ orders : "channel code"

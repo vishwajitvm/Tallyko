@@ -6,7 +6,7 @@ The Customer Relationship Management (CRM) module helps businesses build long-te
 ## 2. Key Capabilities
 * **Frictionless Capture:** Add a customer to an order simply by typing their phone number during billing. If they are new, they are automatically saved.
 * **Rich Profiles:** View a customer's entire lifetime value, average order size, and specific favorite items.
-* **Loyalty Points Engine:** Automatically award points based on order value (e.g., 1 point per $10 spent) which can be redeemed on future purchases.
+* **Loyalty Points Engine:** Automatically award points based on order value (default 1 point per ₹100) which can be redeemed on future purchases.
 * **Direct Communication (Future Scope):** Integration for bulk SMS or WhatsApp marketing campaigns based on customer segments (e.g., "Hasn't visited in 30 days").
 
 ## 3. How to Use
@@ -19,7 +19,7 @@ The Customer Relationship Management (CRM) module helps businesses build long-te
 5. Upon checkout, the order is permanently linked to this customer profile.
 
 ### B. Managing Customer Profiles
-1. Navigate to the **CRM** tab on the bottom navigation bar.
+1. Open **Customers**.
 2. View the list of all registered customers, sortable by total spend or point balance.
 3. Tap a specific customer to open their detailed profile.
 4. Here you can view their past orders, edit their contact information, or manually adjust their loyalty points.
@@ -33,23 +33,24 @@ The Customer Relationship Management (CRM) module helps businesses build long-te
 ```mermaid
 sequenceDiagram
     actor Cashier
-    participant POS as Mobile App
-    participant DB as Backend Database
-    
-    Cashier->>POS: Enter Phone: 555-1234
-    POS->>DB: Lookup Customer by Phone
-    
-    alt Customer Exists
-        DB-->>POS: Return Profile (John Doe, 150 Points)
-    else New Customer
-        DB-->>POS: Not Found
-        POS->>Cashier: Prompt for Name
-        Cashier->>POS: Enters "John Doe"
-        POS->>DB: Create Customer Record
-        DB-->>POS: Success
+    participant POS as App (Billing)
+    participant API as FastAPI
+    participant DB as PostgreSQL (RLS)
+
+    Cashier->>POS: enter phone 98765 43210
+    POS->>API: GET /crm/customers/lookup?phone=
+    alt known customer
+        API-->>POS: name, points, visits
+    else new
+        API-->>POS: not found, cashier types a name
     end
-    
-    Cashier->>POS: Completes Order ($50)
-    POS->>DB: Save Order + Link to John Doe
-    DB->>DB: Auto-credit 5 Loyalty Points
+    Cashier->>POS: Pay Rs 500 (optionally redeem points)
+    POS->>API: POST /orders {customer_phone, customer_name, redeem_points, payments}
+    API->>DB: find or create the customer by phone
+    API->>DB: bill completed: points earned per Rs 100,<br/>visits and total spent updated
+    API->>DB: queue e-receipt / reward email if the customer has an email
 ```
+
+Settings: `loyalty_enabled`, `loyalty_points_per_100` (points per ₹100), `loyalty_point_value` (₹ per point). Points are reversed if a completed bill is cancelled. Phone numbers are masked for roles without `customers.view_contact`. Loyalty *offers* (e.g. "5 visits this month → 20% off") are in [014](./014_Offers_Loyalty_Rewards_And_Email.md). Bulk SMS/WhatsApp campaigns are not built.
+
+**API:** `GET/POST /crm/customers`, `GET/PUT /crm/customers/{id}` (detail with order history), `GET /crm/customers/lookup?phone=`. Tests: `backend/tests/integration/test_orders.py`.

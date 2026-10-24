@@ -1,54 +1,44 @@
 # Reliability & Rollback Strategy
 
-## 1. Addressing the Competitor Weakness
+## 1. The competitor weakness
 
-Shopto reviews frequently cite multi-day outages and broken functionality following updates. Tallyko is engineered specifically to prevent this class of failure. Reliability is a hard constraint, not an afterthought.
+Shopto reviews cite multi-day outages and features breaking after updates. Tallyko treats "the counter keeps billing" as a hard requirement.
 
-## 2. Health Checks & Self-Healing
+## 2. Health checks and self-healing
 
-Every service defined in `docker-compose.yml` includes rigorous health checks.
+- `GET /health` checks Postgres and Redis. The backend container's healthcheck calls it; `db` and `cache` have their own healthchecks, and `backend` starts only after both are healthy.
+- Production services use `restart: always` (dev: `unless-stopped`), so Docker restarts a crashed container.
+- One server runs uvicorn with `WEB_CONCURRENCY` workers; a crashed worker is replaced by uvicorn. There is no load balancer or replica pool (the old plan's Traefik routing is not used).
 
-*   **FastAPI:** Exposes a `/health` endpoint that checks not just API responsiveness, but also verifies connectivity to Postgres and Redis.
-*   **Docker Daemon:** If a container fails its health check (e.g., API returns 500, or PostgreSQL connection drops), Docker automatically restarts the container.
-*   **Traefik Routing:** The reverse proxy automatically removes unhealthy API containers from its load-balancing pool, ensuring users are not routed to a broken instance.
+## 3. Graceful degradation
 
-## 3. Graceful Degradation
+| Failure | What happens |
+|---|---|
+| Internet down at the shop | POS keeps billing from the offline cache; bills wait in the outbox and replay exactly once ([07](./07_Offline_Sync_Strategy.md)). A server on a shop PC keeps tables, kitchen and online orders working on the LAN ([17](./17_Free_Cloud_Deployment.md)). |
+| Redis down | Rate limiting fails open; tenant config is read from Postgres; single-device revocation isn't checked (business-wide sign-out still is); the daily job runs without its lock (it is idempotent); "add to my bill" retries may duplicate rarely. |
+| SMTP down / not configured | Emails stay `queued` and are retried (3 attempts), or are logged `skipped`; billing is unaffected. |
+| OCR slow or failing | Only the menu-photo import shows an error; billing is unaffected. |
+| Server down at 01:00 IST | The subscription check runs when the API starts again. |
+| Subscription lapsed | Business screens show the renewal screen (402); data and offline bills are kept. |
+| Heavy report query | Reports are separate endpoints; they don't block billing transactions. |
 
-If a non-critical subsystem fails, the core POS billing flow must survive.
+## 4. Rollback
 
-*   *Example 1 (AI Processing Down):* If the Celery workers processing AI menu uploads crash, the user receives an alert: "AI Menu Upload currently delayed," but manual POS billing continues flawlessly.
-*   *Example 2 (Analytics DB Slow):* If a complex analytical query times out, it should not lock the main database. Queries are subjected to strict timeouts, and read-heavy analytics will eventually be routed to a read-replica database to protect the primary transactional database.
-*   *Example 3 (Internet Outage):* Handled by the offline-first architecture (`07_Offline_Sync_Strategy.md`).
+1. **Code:** check out the previous release tag and run `docker compose -f docker-compose.prod.yml up -d --build`. Images are built on the server; there is no registry of old images yet.
+2. **Database:** migrations are **forward-only and non-destructive within a release**: no column or table is dropped in the release that stops using it. The older code still finds every column it expects, so a code rollback needs no schema rollback. `manage.py rollback` exists for development; avoid it on production data.
+3. **Data:** nightly `scripts/backup_db.*`; restore with `scripts/restore_db.sh`. Test a restore once before going live.
+4. **Records:** businesses can't delete bills (database role), and Tallyko prefers archiving to deleting, so mistakes are reversible ([019](./features/019_Owner_Watch_No_Deletes_And_Menu_History.md)).
 
-## 4. Rollback Procedure
-
-If a deployment introduces a critical bug that bypasses the canary rollout phase, an immediate rollback is required.
-
-1.  **Code Rollback:** The CI/CD pipeline maintains previously built Docker images tagged by commit hash. Reverting is as simple as updating the deploy script to target the previous hash (e.g., `docker service update --image api:old_hash`). This takes seconds.
-2.  **Database Rollback (The Hard Part):** 
-    *   Rolling back code is easy; rolling back a database schema is dangerous.
-    *   **Strategy:** We employ *forward-only, non-destructive migrations*. We never drop a column or table in the same release that removes the application code using it. If a rollback occurs, the older application code will still find the columns it expects in the database.
-
-## 5. Reliability Flow Diagram
+## 5. Flow
 
 ```mermaid
 flowchart TD
-    Traffic[Incoming Client Traffic]
-    Proxy[Traefik Proxy]
-    
-    subgraph API Cluster
-        API1[API Replica 1 \n HEALTHY]
-        API2[API Replica 2 \n HEALTHY]
-        API3[API Replica 3 \n FAILING /HEALTH]
-    end
-    
-    Traffic --> Proxy
-    Proxy -->|Load Balance| API1
-    Proxy -->|Load Balance| API2
-    Proxy -.->|X Drops Route X| API3
-    
-    API3 --"Fails Healthcheck"--> Docker(Docker Daemon)
-    Docker --"Initiates Restart"--> API3
-    
-    style API3 fill:#f99,stroke:#333
+    dev(["Devices"]) --> caddy["Caddy (HTTPS)"]
+    caddy --> api["backend: uvicorn workers"]
+    api -->|"/health: DB + Redis"| hc{"healthy?"}
+    hc -- "no" --> dock["Docker restarts the container<br/>(restart: always)"]
+    dock --> api
+    dev -. "server unreachable" .-> outbox[("Device outbox<br/>bills replay later")]
+    api --> pg[("PostgreSQL")]
+    api --> redis[("Redis (fail open)")]
 ```
